@@ -1,0 +1,432 @@
+# Shift Handover Pro
+
+**AI-assisted maintenance resume workflow for safely continuing unfinished software changes with IBM Bob 2.0.**
+
+**Submission branch:** `main`
+
+Shift Handover Pro demonstrates how **IBM Bob 2.0**, operating with full-repository context, can help an engineer resume a partially implemented maintenance request without losing sight of existing application behavior.
+
+The bundled demonstration focuses on one precise maintenance change in an ATC shift-handover application:
+
+> Replace the legacy equipment `fault` status with a three-state model: `Operational`, `Maintenance`, and `Offline`.
+
+The workflow identifies the affected repository touch points, plans the change before implementation, applies the update, and verifies the resulting application behavior.
+
+---
+
+## 🚀 Live Demo
+
+**Live application:**
+[https://aesthetic-tarsier-4fb988.netlify.app/](https://aesthetic-tarsier-4fb988.netlify.app/)
+
+**Source repository:**
+[https://github.com/khushichoudhary950/shift-handover-pro-bob](https://github.com/khushichoudhary950/shift-handover-pro-bob)
+
+**Demo video:**
+`VIDEO_URL_PENDING`
+
+---
+
+## ⚡ Try It in 60 Seconds
+
+1. Open the live Shift Handover Pro application.
+2. Navigate to the equipment/status workflow.
+3. Observe the three supported equipment states:
+   - `Operational`
+   - `Maintenance`
+   - `Offline`
+4. Review the supplied IBM Bob session evidence.
+5. Inspect the repository implementation and the affected components.
+6. Compare the implementation with the original maintenance requirement.
+
+The purpose of the demonstration is not simply to show that the new UI works, but to demonstrate how repository-aware AI can help understand and safely continue an unfinished development task.
+
+---
+
+# 🎯 Problem
+
+## A paused codebase is a trap for the next engineer
+
+Maintenance work frequently does not begin from a clean repository.
+
+A change request may already have been started, partially implemented, or left in an uncertain state. When another engineer picks up the work, they first need to reconstruct:
+
+- What was requested?
+- What has already been changed?
+- What is still incomplete?
+- Which parts of the application are affected?
+- Could the new change alter existing behavior?
+
+Without structured repository context, this investigation can require manually reading multiple files and reconstructing the original development intent.
+
+Shift Handover Pro explores a different workflow:
+
+**Change Request → Repository Context → Impact Analysis → Implementation → Verification**
+
+---
+
+# 💡 Solution
+
+Shift Handover Pro uses **IBM Bob 2.0 Agent mode** with access to the full project repository.
+
+Instead of providing Bob with an isolated code snippet, the workflow allows the agent to reason about the relevant application structure and identify the components affected by the requested change.
+
+For the demonstrated maintenance task, Bob identified four touch points:
+
+1. **CSS selector**
+2. **Supabase migration**
+3. **Dashboard logic**
+4. **Handover form UI**
+
+The implementation was designed to preserve backward compatibility while introducing the new three-state equipment model.
+
+---
+
+# 🤖 IBM Bob 2.0 Usage
+
+IBM Bob 2.0 is a core part of the demonstrated development workflow.
+
+The project uses Bob's **Agent mode** with full-repository context.
+
+The demonstrated workflow is:
+
+```text
+Maintenance Request
+        ↓
+Full Repository Context
+        ↓
+Repository Analysis
+        ↓
+Affected Touch Points
+        ↓
+Implementation Plan
+        ↓
+Code Changes
+        ↓
+Backward Compatibility
+        ↓
+Application Verification
+```
+
+### What Bob was used for
+
+Bob was used to:
+
+- Understand the existing repository structure
+- Analyze the pending maintenance request
+- Identify affected implementation areas
+- Plan the change before implementation
+- Coordinate changes across multiple application layers
+- Implement the requested equipment-status change
+- Support backward-compatible handling of legacy status data
+- Confirm completion through the Bob task workflow
+
+---
+
+# 🔧 Demonstrated Maintenance Change
+
+## Legacy model
+
+The application previously contained a legacy:
+
+```text
+fault
+```
+
+equipment state.
+
+## Requested model
+
+The demonstrated change introduces:
+
+```text
+Operational
+Maintenance
+Offline
+```
+
+The change touches multiple areas of the application rather than being a single UI modification.
+
+### Identified touch points
+
+```text
+CSS selector
+      │
+      ├── Supabase migration
+      │
+      ├── Dashboard logic
+      │
+      └── Handover form UI
+```
+
+This is why full-repository context matters: the requested behavior affects more than one file or interface element.
+
+---
+
+# 🛡️ Backward Compatibility
+
+The demonstrated implementation was designed around backward compatibility.
+
+Legacy status data is handled during application operation so that the new status model can be introduced without requiring manual database work.
+
+The goal is to change the requested behavior while avoiding unnecessary disruption to existing application data and workflow.
+
+---
+
+# 🏗️ Architecture
+
+The project combines a web application interface with a backend/data layer.
+
+High-level workflow:
+
+```text
+                    ┌──────────────────────┐
+                    │   Shift Handover Pro │
+                    │      Web App          │
+                    └──────────┬───────────┘
+                               │
+                 ┌─────────────┴─────────────┐
+                 │                           │
+          Handover UI                  Equipment UI
+                 │                           │
+                 └─────────────┬─────────────┘
+                               │
+                        Application Logic
+                               │
+                         Supabase Layer
+                               │
+                         Persistent Data
+```
+
+IBM Bob operates at the development workflow layer:
+
+```text
+Repository
+    ↓
+IBM Bob 2.0 Agent
+    ↓
+Context + Analysis
+    ↓
+Implementation
+    ↓
+Verification
+```
+
+---
+
+# 🧪 Bob Session Evidence
+
+The project submission includes IBM Bob task-session evidence documenting the demonstrated development workflow.
+
+The evidence includes:
+
+- Bob Agent interaction
+- Repository-level analysis
+- Identified touch points
+- Implementation workflow
+- Task completion state
+
+The submission records the demonstrated task as:
+
+```text
+4 / 4 tasks completed
+```
+
+Screenshots of the Bob session are included with the hackathon submission materials.
+
+---
+
+# 📊 Result
+
+The resulting application demonstrates the new equipment status model:
+
+```text
+┌──────────────┐
+│ Operational  │
+└──────────────┘
+
+┌──────────────┐
+│ Maintenance  │
+└──────────────┘
+
+┌──────────────┐
+│ Offline      │
+└──────────────┘
+```
+
+The existing color-coding and application workflow are preserved as part of the demonstrated implementation.
+
+---
+
+# 📈 Why This Matters
+
+The core idea is not simply:
+
+> "Ask AI to write code."
+
+The workflow is:
+
+> **Give AI the right repository context, identify what the change actually touches, implement deliberately, and verify the resulting behavior.**
+
+This makes Shift Handover Pro a demonstration of **AI-assisted software maintenance and legacy modernization**, rather than a simple code-generation application.
+
+---
+
+# 🔮 What's Next
+
+The current demonstration focuses on one maintenance change.
+
+Potential extensions include:
+
+- Full backlog reconciliation
+- Automatic maintenance-resume briefs
+- Change-impact summaries
+- Repository-aware pending-task detection
+- Automated reviewer checklists
+- Reusable maintenance-resume workflows
+- Integration with larger software-maintenance pipelines
+
+---
+
+# 🧰 Technology
+
+- **IBM Bob 2.0**
+- **AI Agents / Agentic Coding**
+- **Supabase**
+- **JavaScript / Web application stack**
+- **Netlify**
+- **Git / GitHub**
+
+### Categories
+
+```text
+AI Agents
+Agentic Coding
+Developer Tools
+Legacy Modernization
+AI-Assisted Software Maintenance
+Full-Repository Context
+```
+
+---
+
+# 📁 Repository Structure
+
+The repository is organized around the application and its development workflow.
+
+```text
+shift-handover-pro-bob/
+│
+├── src/
+├── public/
+├── ...
+├── README.md
+└── ...
+```
+
+> Update this section with the exact repository tree before submission rather than documenting folders that are not actually present.
+
+---
+
+# 🚀 Running Locally
+
+Clone the repository:
+
+```bash
+git clone https://github.com/khushichoudhary950/shift-handover-pro-bob.git
+cd shift-handover-pro-bob
+```
+
+Install the project dependencies according to the repository configuration.
+
+Run the development server using the project's configured command.
+
+> Replace the commands below with the exact commands defined in `package.json` before publishing this README.
+
+```bash
+npm install
+npm run dev
+```
+
+Then open the local development URL displayed by the development server.
+
+---
+
+# 🔐 Security & Deployment
+
+The live demonstration is deployed through **Netlify**.
+
+Before publishing the repository:
+
+- Do not commit API keys.
+- Do not commit Supabase service-role credentials.
+- Use environment variables for private configuration.
+- Verify that `.env` files are included in `.gitignore`.
+- Check that no personal credentials or private repository information are present.
+- Use public/demo-safe credentials and data only.
+
+---
+
+# 📋 Project Status
+
+**Current status:** Working hackathon demonstration
+
+### Demonstrated
+
+- [x] Shift Handover Pro application
+- [x] IBM Bob 2.0 Agent workflow
+- [x] Full-repository context
+- [x] Equipment status change
+- [x] Three-state equipment model
+- [x] Four identified implementation touch points
+- [x] Backward-compatible implementation
+- [x] Bob task completion evidence
+- [x] Netlify deployment
+- [x] Public GitHub repository
+
+### Planned
+
+- [ ] Full backlog reconciliation
+- [ ] Automatic resume briefs
+- [ ] Reusable maintenance workflow
+- [ ] Expanded change-impact analysis
+
+---
+
+# ⚠️ Scope & Limitations
+
+Shift Handover Pro is a demonstration of an AI-assisted maintenance workflow.
+
+The demonstrated result should not be interpreted as proof that AI can guarantee complete semantic equivalence or production safety for arbitrary repositories.
+
+The workflow is designed around the specific application, repository context, and maintenance scenario demonstrated in this project.
+
+Human review remains important before applying maintenance changes to production systems.
+
+---
+
+# 🏆 Hackathon Submission
+
+**Project:** Shift Handover Pro
+**Team:** Dhola Minds
+**Built with:** IBM Bob 2.0
+
+### Submission Links
+
+**Live Demo:**
+[https://aesthetic-tarsier-4fb988.netlify.app/](https://aesthetic-tarsier-4fb988.netlify.app/)
+
+**GitHub:**
+[https://github.com/khushichoudhary950/shift-handover-pro-bob](https://github.com/khushichoudhary950/shift-handover-pro-bob)
+
+**Demo Video:**
+`VIDEO_URL_PENDING`
+
+---
+
+## 👥 Team Dhola Minds
+
+Built for the IBM Bob 2.0 hackathon.
+
+**Shift Handover Pro**
+*Resume the work. Understand the context. Verify the change.*
