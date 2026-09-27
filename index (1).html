@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Shift Handover Pro — ATC Operations</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#080B12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Handover Pro">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --void:#080B12;
+  --panel:#111828;
+  --panel-raised:#182238;
+  --panel-hi:#1E2A45;
+  --line:#26314A;
+  --line-soft:#1A2338;
+  --text:#EAF0FA;
+  --text-dim:#8C9AB8;
+  --text-faint:#5C6B8A;
+  --radar:#2BD9A8;
+  --radar-dim:#17604C;
+  --amber:#F5A623;
+  --amber-dim:#5C4014;
+  --red:#FF4D5E;
+  --red-dim:#5C1A22;
+  --blue:#4C8DFF;
+  --blue-dim:#17325C;
+  --radius:14px;
+  --radius-sm:9px;
+  font-size:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--void);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.mono{font-family:'JetBrains Mono',monospace;}
+.disp{font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:0.01em;}
+#app{
+  max-width:480px;
+  margin:0 auto;
+  min-height:100vh;
+  position:relative;
+  background:
+    radial-gradient(ellipse 600px 300px at 50% -10%, rgba(76,141,255,0.08), transparent),
+    var(--void);
+  display:flex;
+  flex-direction:column;
+}
+@media (min-width:481px){
+  body{background:#04060A;}
+  #app{box-shadow:0 0 80px rgba(0,0,0,0.6);border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);}
+}
+.sidebar-brand{display:none;}
+@media (min-width:900px){
+  body.app-shell #app{max-width:100%;border:none;box-shadow:none;}
+  body.app-shell .topbar{margin-left:250px;padding-left:36px;padding-right:36px;}
+  body.app-shell .screen{margin-left:250px;padding-left:36px;padding-right:36px;max-width:960px;padding-bottom:48px;}
+  body.app-shell .bottomnav{
+    position:fixed;top:0;left:0;right:auto;bottom:0;width:250px;max-width:250px;margin:0;
+    flex-direction:column;align-items:stretch;justify-content:flex-start;
+    padding:26px 14px;gap:4px;border-top:none;border-right:1px solid var(--line-soft);
+    background:var(--panel);backdrop-filter:none;
+  }
+  body.app-shell .nav-item{flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 16px;border-radius:10px;font-size:13.5px;}
+  body.app-shell .nav-item.active{background:var(--panel-hi);}
+  body.app-shell .nav-item svg{width:19px;height:19px;}
+  body.app-shell .sidebar-brand{
+    display:flex;align-items:center;gap:10px;padding:8px 16px 22px;margin-bottom:10px;
+    border-bottom:1px solid var(--line-soft);font-family:'Rajdhani',sans-serif;font-weight:700;
+    font-size:15px;color:var(--text);
+  }
+  body.app-shell .overlay{align-items:center;}
+  body.app-shell .sheet{max-width:520px;border-radius:20px;border-bottom:1px solid var(--line-soft);}
+}
+
+/* ---------- scrollbars ---------- */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+/* ---------- utility ---------- */
+.screen{flex:1;display:flex;flex-direction:column;padding-bottom:96px;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.px{padding-left:20px;padding-right:20px;}
+.section-label{
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:0.14em;
+  color:var(--text-faint);text-transform:uppercase;margin:26px 0 10px;display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--line-soft);}
+.card{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);
+  padding:16px;
+}
+.row{display:flex;align-items:center;gap:10px;}
+.between{display:flex;align-items:center;justify-content:space-between;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+
+/* ---------- buttons ---------- */
+.btn{
+  border:none;border-radius:var(--radius-sm);padding:13px 18px;font-family:'Rajdhani',sans-serif;
+  font-weight:700;font-size:15px;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s, filter .12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:linear-gradient(135deg,var(--radar),#1EA787);color:#05130F;box-shadow:0 4px 20px rgba(43,217,168,0.25);}
+.btn-secondary{background:var(--panel-hi);color:var(--text);border:1px solid var(--line);}
+.btn-danger{background:linear-gradient(135deg,var(--red),#D8323F);color:#fff;box-shadow:0 4px 20px rgba(255,77,94,0.25);}
+.btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--line);}
+.btn-block{width:100%;}
+.btn-sm{padding:9px 14px;font-size:13px;}
+.icon-btn{
+  width:38px;height:38px;border-radius:10px;background:var(--panel-hi);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;color:var(--text-dim);cursor:pointer;flex-shrink:0;
+}
+.icon-btn:active{transform:scale(0.94);}
+
+/* ---------- inputs ---------- */
+label{font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;}
+input,select,textarea{
+  width:100%;background:var(--panel-raised);border:1px solid var(--line);color:var(--text);
+  border-radius:var(--radius-sm);padding:11px 12px;font-family:'Inter',sans-serif;font-size:14.5px;
+  outline:none;transition:border-color .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--radar);}
+textarea{resize:vertical;min-height:80px;font-family:'Inter',sans-serif;}
+.field{margin-bottom:14px;}
+select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238C9AB8' stroke-width='1.6' fill='none'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+
+/* ---------- status dots ---------- */
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dot-op{background:var(--radar);box-shadow:0 0 8px var(--radar);}
+.dot-maint{background:var(--amber);box-shadow:0 0 8px var(--amber);}
+.dot-fault{background:var(--red);box-shadow:0 0 8px var(--red);}
+.pill{
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11.5px;letter-spacing:0.05em;text-transform:uppercase;
+  padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;
+}
+.pill-op{background:rgba(43,217,168,0.12);color:var(--radar);}
+.pill-maint{background:rgba(245,166,35,0.12);color:var(--amber);}
+.pill-fault{background:rgba(255,77,94,0.12);color:var(--red);}
+.pill-blue{background:rgba(76,141,255,0.12);color:var(--blue);}
+.pill-neutral{background:var(--panel-hi);color:var(--text-dim);}
+
+/* ---------- login ---------- */
+.login-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:32px 26px;position:relative;overflow:hidden;}
+.radar-scope{
+  width:180px;height:180px;margin:0 auto 22px;border-radius:50%;position:relative;
+  background:radial-gradient(circle, rgba(43,217,168,0.05) 0%, transparent 70%);
+  border:1px solid var(--line-soft);
+}
+.radar-scope::before,.radar-scope::after{
+  content:'';position:absolute;border-radius:50%;border:1px solid var(--line-soft);
+}
+.radar-scope::before{inset:22px;}
+.radar-scope::after{inset:44px;}
+.radar-sweep{
+  position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  animation:spin 4s linear infinite;
+}
+.radar-sweep::before{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg, rgba(43,217,168,0.55) 0deg, rgba(43,217,168,0) 55deg, transparent 360deg);
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.logo-badge{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:64px;height:64px;border-radius:50%;background:var(--panel);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;z-index:2;
+}
+.brand-title{text-align:center;font-size:28px;color:var(--text);margin-bottom:2px;}
+.brand-sub{text-align:center;font-size:12.5px;color:var(--text-faint);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:34px;font-family:'Rajdhani',sans-serif;font-weight:600;}
+.biometric-btn{
+  width:64px;height:64px;border-radius:50%;background:var(--panel-hi);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;margin:18px auto 6px;cursor:pointer;color:var(--radar);
+  transition:box-shadow .3s;
+}
+.biometric-btn.scanning{animation:pulseScan 1.1s ease-in-out infinite;}
+@keyframes pulseScan{0%,100%{box-shadow:0 0 0 0 rgba(43,217,168,0.4);}50%{box-shadow:0 0 0 12px rgba(43,217,168,0);}}
+.link-row{display:flex;justify-content:space-between;margin-top:14px;font-size:13px;}
+.link{color:var(--blue);text-decoration:none;cursor:pointer;background:none;border:none;font-size:13px;font-family:inherit;}
+.emergency-fab{
+  position:fixed;bottom:22px;right:calc(50% - 240px + 18px);z-index:40;
+  background:var(--red);color:#fff;border:none;border-radius:30px;padding:12px 18px;
+  display:flex;align-items:center;gap:8px;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:0.04em;
+  box-shadow:0 6px 24px rgba(255,77,94,0.4);cursor:pointer;font-size:13px;text-transform:uppercase;
+}
+@media (max-width:480px){.emergency-fab{right:18px;}}
+
+/* ---------- topbar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:20;background:rgba(8,11,18,0.88);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line-soft);padding:16px 20px 14px;
+}
+.topbar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+.greet{font-size:20px;}
+.greet-sub{font-size:12px;color:var(--text-faint);margin-top:2px;}
+.avatar{
+  width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#2A5FCC);
+  display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:#fff;cursor:pointer;flex-shrink:0;
+}
+.bell-wrap{position:relative;}
+.bell-dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;background:var(--red);border-radius:50%;border:2px solid var(--void);}
+
+/* ---------- bottom nav ---------- */
+.bottomnav{
+  position:fixed;bottom:0;left:0;right:0;z-index:30;
+  max-width:480px;margin:0 auto;background:rgba(17,24,40,0.92);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line-soft);display:flex;padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;
+  color:var(--text-faint);cursor:pointer;border:none;background:none;font-family:'Rajdhani',sans-serif;
+  font-size:10.5px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;
+}
+.nav-item.active{color:var(--radar);}
+.nav-item svg{width:21px;height:21px;}
+
+/* ---------- flight strip ---------- */
+.strip{
+  background:var(--panel);border:1px solid var(--line-soft);border-left:4px solid var(--radar);
+  border-radius:10px;padding:13px 14px;margin-bottom:10px;cursor:pointer;
+}
+.strip.arr{border-left-color:var(--blue);}
+.strip.dep{border-left-color:var(--radar);}
+.strip.delayed{border-left-color:var(--amber);}
+.strip.vip{border-left-color:#C78CFF;}
+.strip-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.strip-call{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;letter-spacing:0.02em;}
+.strip-meta{font-size:12px;color:var(--text-dim);display:flex;gap:12px;flex-wrap:wrap;}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;padding:4px;margin-bottom:18px;}
+.tab{flex:1;text-align:center;padding:9px 4px;border-radius:9px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;color:var(--text-faint);border:none;background:none;}
+.tab.active{background:var(--panel-hi);color:var(--radar);}
+
+/* ---------- emergency grid ---------- */
+.emg-btn{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;padding:18px 10px;
+  display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;color:var(--text);
+  transition:border-color .15s,background .15s;
+}
+.emg-btn:active{background:var(--panel-hi);}
+.emg-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,77,94,0.12);color:var(--red);}
+.emg-label{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12.5px;text-align:center;letter-spacing:0.02em;}
+
+/* ---------- modal / sheet ---------- */
+.overlay{position:fixed;inset:0;background:rgba(4,6,10,0.7);backdrop-filter:blur(3px);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .18s ease;}
+.sheet{
+  background:var(--panel);width:100%;max-width:480px;border-radius:20px 20px 0 0;
+  border:1px solid var(--line-soft);border-bottom:none;max-height:88vh;overflow-y:auto;
+  padding:10px 20px 30px;animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.sheet-handle{width:40px;height:4px;background:var(--line);border-radius:3px;margin:6px auto 16px;}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:80;
+  background:var(--panel-hi);border:1px solid var(--line);border-left:3px solid var(--radar);
+  color:var(--text);padding:12px 18px;border-radius:11px;font-size:13.5px;box-shadow:0 8px 30px rgba(0,0,0,0.5);
+  animation:toastIn .22s ease; max-width:90%;
+}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-14px);}to{opacity:1;transform:translate(-50%,0);}}
+
+/* ---------- misc ---------- */
+.hr{height:1px;background:var(--line-soft);margin:16px 0;}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{padding:7px 13px;border-radius:20px;border:1px solid var(--line);background:var(--panel-raised);font-size:12.5px;color:var(--text-dim);cursor:pointer;}
+.chip.on{background:var(--radar-dim);border-color:var(--radar);color:var(--radar);}
+.checkbox-toggle{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line);background:var(--panel-raised);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+.checkbox-toggle.on{background:var(--radar);border-color:var(--radar);}
+.eq-select{display:flex;gap:6px;}
+.eq-opt{flex:1;text-align:center;padding:7px 4px;border-radius:8px;border:1px solid var(--line);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;cursor:pointer;color:var(--text-faint);}
+.eq-opt.op.on{background:var(--radar-dim);border-color:var(--radar);color:var(--radar);}
+.eq-opt.maint.on{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);}
+.eq-opt.offline.on{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.sig-canvas{width:100%;height:110px;background:var(--panel-raised);border:1px dashed var(--line);border-radius:10px;touch-action:none;}
+.big-stat{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:30px;line-height:1;}
+.notif-item{padding:13px 0;border-bottom:1px solid var(--line-soft);display:flex;gap:12px;}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);margin-top:6px;flex-shrink:0;}
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-faint);}
+
+/* ---------- utc bar / movement badges / shift log / briefing ---------- */
+.utc-bar{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--radar);letter-spacing:0.03em;}
+.airport-line{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12.5px;color:var(--text-dim);letter-spacing:0.03em;text-transform:uppercase;}
+.airport-line .sep{color:var(--text-faint);}
+.utc-bar .sep{color:var(--text-faint);}
+.utc-login{text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--radar);letter-spacing:0.04em;margin-bottom:18px;}
+.pill-arr{background:rgba(76,141,255,0.12);color:var(--blue);}
+.pill-dep{background:rgba(43,217,168,0.12);color:var(--radar);}
+.pill-div{background:rgba(245,166,35,0.12);color:var(--amber);}
+.tabs.tabs4 .tab{font-size:11px;padding:9px 2px;}
+.tabs-scroll{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;padding:4px;margin-bottom:18px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tabs-scroll::-webkit-scrollbar{display:none;}
+.tabs-scroll .tab{flex:0 0 auto;padding:9px 16px;white-space:nowrap;font-size:12px;}
+.flog-table{width:100%;border-collapse:collapse;font-size:12px;}
+.flog-table th{text-align:left;color:var(--text-faint);font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;font-size:10.5px;padding:6px 6px;border-bottom:1px solid var(--line-soft);}
+.flog-table td{padding:8px 6px;border-bottom:1px solid var(--line-soft);vertical-align:top;font-family:'JetBrains Mono',monospace;font-size:11.5px;}
+.flog-table td.desc{font-family:'Inter',sans-serif;color:var(--text-dim);}
+.worklist-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line-soft);}
+.worklist-item .x{margin-left:auto;color:var(--text-faint);cursor:pointer;flex-shrink:0;}
+.shift-card{background:var(--panel);border:1px solid var(--line-soft);border-left:3px solid var(--blue);border-radius:10px;padding:13px 14px;margin-bottom:10px;}
+.shift-card.open{border-left-color:var(--radar);}
+.add-row{display:flex;gap:8px;margin-top:10px;}
+.add-row input{flex:1;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================= STATE ============================= */
+const state = {
+  screen:'login',
+  loggedIn:false,
+  profile:null,
+  handoverTab:'create',
+  draft:null,
+  showAddNotam:false,
+  handoverDetail:null,
+  showForgot:false,
+  showEmergencyContacts:false,
+  scanning:false,
+  toastMsg:null,
+  histFilterShift:'all',
+  histFilterDate:'',
+  loginPosition:'ATC Tower',
+  activeShiftLog:null,
+  showLogoutConfirm:false,
+  briefing:null,
+  newWorkText:'',
+  newSchedule:{time:'',position:'ATC Tower',controller:''},
+  editingProfile:false,
+  showQuickAddWork:false,
+  workDetail:null,
+  workLogDraft:{type:'Apron Work', startAt:'', endAt:'', callsign:'', registration:'', departure:'', destination:'', description:''},
+};
+
+/* ============================= SUPABASE CONFIG ============================= */
+/* 1. Create a free project at https://supabase.com
+   2. Run schema.sql (provided separately) in the SQL editor
+   3. Paste your Project URL and anon public key below (Project Settings > API) */
+const SUPABASE_URL = "https://ylmmuukwidgtejfqgjtw.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Q7Nyy8uaL3T8BlPk2XC6zQ_gWs9LPuE";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============================= SHARED APP DATA (key/value table) ============================= */
+async function getShared(key, fallback){
+  try{
+    const { data, error } = await sb.from('app_data').select('value').eq('key', key).maybeSingle();
+    if(error || !data) return fallback;
+    return data.value;
+  }catch(e){ console.error(e); return fallback; }
+}
+async function setShared(key, value){
+  try{
+    await sb.from('app_data').upsert({ key, value, updated_at: new Date().toISOString() });
+  }catch(e){ console.error(e); }
+}
+
+/* ============================= PROFILE (per-controller, tied to Supabase Auth) ============================= */
+function mapProfile(row){
+  if(!row) return null;
+  return {
+    controllerId: row.controller_id,
+    name: row.name,
+    employeeId: row.employee_id,
+    role: row.role,
+    shift: row.shift_schedule,
+    nickname: row.nickname || '',
+    isAdmin: row.is_admin || false,
+  };
+}
+async function getProfile(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) return null;
+  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if(error || !data) return null;
+  return mapProfile(data);
+}
+async function updateProfile(fields){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) return;
+  const payload = {};
+  if(fields.name!==undefined) payload.name = fields.name;
+  if(fields.employeeId!==undefined) payload.employee_id = fields.employeeId;
+  if(fields.role!==undefined) payload.role = fields.role;
+  if(fields.shift!==undefined) payload.shift_schedule = fields.shift;
+  if(fields.controllerId!==undefined) payload.controller_id = fields.controllerId;
+  if(fields.nickname!==undefined) payload.nickname = fields.nickname;
+  await sb.from('profiles').update(payload).eq('id', user.id);
+}
+
+/* ============================= SEED DATA ============================= */
+const DEFAULT_EQUIPMENT = {
+  primaryRadar:{status:'operational',validUntil:null}, secondaryRadar:{status:'operational',validUntil:null},
+  ilsCat1:{status:'operational',validUntil:null}, ilsCat2:{status:'operational',validUntil:null}, ilsCat3:{status:'operational',validUntil:null},
+  vor:{status:'operational',validUntil:null}, gp:{status:'operational',validUntil:null}, hpdme:{status:'operational',validUntil:null}, llz:{status:'operational',validUntil:null}, lpdme:{status:'operational',validUntil:null},
+};
+const EQUIPMENT_LABELS = {
+  primaryRadar:'Primary Radar', secondaryRadar:'Secondary Radar',
+  ilsCat1:'ILS CAT I', ilsCat2:'ILS CAT II', ilsCat3:'ILS CAT III',
+  vor:'VOR', gp:'GP', hpdme:'HPDME', llz:'LLZ', lpdme:'LP DME',
+};
+function freshEquipment(){ return JSON.parse(JSON.stringify(DEFAULT_EQUIPMENT)); }
+function normalizeEquipment(raw){
+  const out = {};
+  Object.keys(DEFAULT_EQUIPMENT).forEach(k=>{
+    const v = raw && raw[k];
+    const rawStatus = v && typeof v === 'object' ? (v.status || 'operational') : (typeof v === 'string' ? v : 'operational');
+    const status = rawStatus === 'fault' ? 'offline' : rawStatus; // migrate legacy 'fault' → 'offline'
+    const validUntil = v && typeof v === 'object' ? (v.validUntil || null) : null;
+    out[k] = {status, validUntil};
+  });
+  return out;
+}
+const AIRPORT_NAME = 'Jaipur International Airport';
+const AIRPORT_CODE = 'VIJP';
+const DEFAULT_AIRPORT = { status:'Normal Operations', visibility:'8 km', wind:'270° / 12 kt', activeRunway:'27', clouds:'Few, 3500 ft', qnh:'1013', temp:'27°C' };
+const DEFAULT_FLIGHTS = [
+  {callsign:'AI202', dir:'arrival', movement:'Arrival', time:'14:35', status:'Approach', gate:'5', priority:'Normal', type:'A320', alt:'4,500 ft', speed:'210 kt', route:'DEL–JAI', from:'DEL', to:'JAI', company:'Air India', pax:158, standBay:'Bay 5', baggageBelt:'Belt 2', remarks:'On schedule'},
+  {callsign:'6E341', dir:'departure', movement:'Departure', time:'14:50', status:'Boarding', gate:'2', priority:'Normal', type:'A20N', alt:'-', speed:'-', route:'JAI–BOM', from:'JAI', to:'BOM', company:'IndiGo', pax:174, standBay:'Bay 2', baggageBelt:'-', remarks:''},
+  {callsign:'UK955', dir:'arrival', movement:'Arrival', time:'15:05', status:'Holding', gate:'-', priority:'Normal', type:'A321', alt:'8,000 ft', speed:'240 kt', route:'BLR–JAI', from:'BLR', to:'JAI', company:'Vistara', pax:180, standBay:'TBD', baggageBelt:'Belt 1', remarks:'Holding pattern, 2 turns'},
+  {callsign:'VT-CGV', dir:'arrival', movement:'Arrival', time:'15:20', status:'Enroute', gate:'-', priority:'VIP', type:'B738 (Chtr)', alt:'FL210', speed:'280 kt', route:'DEL–JAI', from:'DEL', to:'JAI', company:'Charter', pax:12, standBay:'VIP Bay', baggageBelt:'-', remarks:'VIP movement — coordinate ground security'},
+  {callsign:'SG112', dir:'departure', movement:'Departure', time:'13:40', status:'Delayed', gate:'4', priority:'Normal', type:'B737', alt:'-', speed:'-', route:'JAI–HYD', from:'JAI', to:'HYD', company:'SpiceJet', pax:162, standBay:'Bay 4', baggageBelt:'-', remarks:'Delayed 35 min — technical'},
+  {callsign:'QF7X', dir:'arrival', movement:'Diversion', time:'13:05', status:'Diverted', gate:'-', priority:'Normal', type:'B789', alt:'2,000 ft', speed:'180 kt', route:'DXB–BOM', from:'DXB', to:'BOM (Div. JAI)', company:'Qantas', pax:236, standBay:'Bay 9', baggageBelt:'Belt 3', remarks:'Diverted to JAI due to weather at BOM'},
+];
+const DEFAULT_BRIEFING = {
+  ongoingWork:[
+    {id:1, text:'Runway 27 inspection follow-up pending after bird activity report', addedBy:'Alex Rivera', time:'08:10', createdAt:new Date().toISOString(), startAt:null, endAt:null, done:false},
+    {id:2, text:'Coordinating fuel bowser access for Gate 4 with ground handling', addedBy:'Alex Rivera', time:'09:40', createdAt:new Date().toISOString(), startAt:null, endAt:null, done:false},
+  ],
+  schedule:[
+    {id:1, time:'06:00–14:00', position:'ATC Tower', controller:'Alex Rivera'},
+    {id:2, time:'14:00–22:00', position:'ATC Tower', controller:'Priya Nair'},
+    {id:3, time:'06:00–14:00', position:'Approach Control', controller:'S. Mehta'},
+  ]
+};
+
+let equipmentCache = null;
+
+/* ============================= INIT ============================= */
+async function init(){
+  // seed shared operational data on first run (safe no-ops after that)
+  const eq = await getShared('equipment', null);
+  if(!eq){ await setShared('equipment', freshEquipment()); }
+  const br = await getShared('briefing', null);
+  if(!br){ await setShared('briefing', DEFAULT_BRIEFING); }
+  const sl = await getShared('shiftLogs', null);
+  if(!sl){ await setShared('shiftLogs', []); }
+  const nt = await getShared('notams', null);
+  if(!nt){ await setShared('notams', []); }
+  const wl = await getShared('workLog', null);
+  if(!wl){ await setShared('workLog', []); }
+  startUtcClock();
+
+  // restore an existing signed-in session (Supabase persists this in the browser,
+  // and this is also where we land right after a Google OAuth redirect)
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){
+    const allowed = await isEmailAllowed(session.user.email);
+    if(!allowed){
+      await sb.auth.signOut();
+      state.loginPosition = detectPositionFromEmail(session.user.email) || state.loginPosition;
+      render();
+      toast('This email ('+session.user.email+') is not authorized. Contact your administrator.');
+      return;
+    }
+    const profile = await getProfile();
+    if(profile){
+      const detected = detectPositionFromEmail(session.user.email);
+      state.profile = {...profile, position: detected || state.loginPosition};
+      state.loggedIn = true;
+      state.screen = 'dashboard';
+      render();
+      loadDashboard();
+      return;
+    }
+  }
+  render();
+}
+
+/* ============================= UTC (ZULU) CLOCK ============================= */
+function formatUTC(){
+  const n = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const dd = String(n.getUTCDate()).padStart(2,'0');
+  const mm = months[n.getUTCMonth()];
+  const yyyy = n.getUTCFullYear();
+  const hh = String(n.getUTCHours()).padStart(2,'0');
+  const mi = String(n.getUTCMinutes()).padStart(2,'0');
+  const ss = String(n.getUTCSeconds()).padStart(2,'0');
+  return {date:`${dd} ${mm} ${yyyy}`, time:`${hh}:${mi}:${ss}Z`};
+}
+function startUtcClock(){
+  setInterval(()=>{
+    const t = formatUTC();
+    document.querySelectorAll('.js-utc-time').forEach(el=> el.textContent = t.time);
+    document.querySelectorAll('.js-utc-date').forEach(el=> el.textContent = t.date);
+  },1000);
+}
+
+/* ============================= TOAST ============================= */
+function toast(msg){
+  state.toastMsg = msg;
+  render();
+  setTimeout(()=>{ state.toastMsg=null; render(); }, 2400);
+}
+function normalizePosition(pos){
+  if(!pos) return 'All';
+  const p = pos.toLowerCase();
+  if(p.includes('area')) return 'Area Control';
+  if(p.includes('approach') || p.includes('radar')) return 'Approach Control';
+  if(p.includes('tower') || p.includes('ground')) return 'ATC Tower';
+  return 'All';
+}
+function detectPositionFromEmail(email){
+  const prefix = (email.split('@')[0]||'').toLowerCase();
+  if(prefix.startsWith('area')) return 'Area Control';
+  if(prefix.startsWith('approach')) return 'Approach Control';
+  if(prefix.startsWith('tower')) return 'ATC Tower';
+  return null;
+}
+function updateDetectedPosition(email){
+  const badge = document.getElementById('li-position-badge');
+  const select = document.getElementById('li-position');
+  const hint = document.getElementById('li-position-hint');
+  if(!badge || !select) return;
+  const detected = detectPositionFromEmail(email);
+  if(detected){
+    badge.textContent = detected + ' (detected)';
+    badge.style.display = 'inline-flex';
+    select.style.display = 'none';
+    hint.style.display = 'none';
+    select.value = detected;
+  } else {
+    badge.style.display = 'none';
+    select.style.display = 'block';
+    hint.style.display = 'block';
+  }
+}
+async function pushNotification(title,message,type,targetPosition='All'){
+  const list = await getShared('notifications', []);
+  list.unshift({id:Date.now(), title, message, type, targetPosition, time:new Date().toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}), read:false});
+  await setShared('notifications', list);
+}
+
+/* ============================= NAV ============================= */
+function goto(screen){
+  state.screen = screen;
+  window.scrollTo(0,0);
+  render();
+  if(screen==='dashboard') loadDashboard();
+  if(screen==='notams') loadNotams();
+  if(screen==='notifications') loadNotifications();
+  if(screen==='profile' && state.profile?.isAdmin) loadAllowlist();
+}
+
+/* ============================= LOGIN ============================= */
+function renderLogin(){
+  return `
+  <div class="login-wrap">
+    <div class="radar-scope">
+      <div class="radar-sweep"></div>
+      <div class="logo-badge">${icon('tower',30)}</div>
+    </div>
+    <div class="brand-title disp">Shift Handover Pro</div>
+    <div class="brand-sub">Jaipur ATC · Multi-Position Control</div>
+    <div class="utc-login">UTC <span class="js-utc-time">${formatUTC().time}</span> · <span class="js-utc-date">${formatUTC().date}</span></div>
+
+    <div class="field">
+      <label>Control Position <span style="color:var(--text-faint);font-weight:500;text-transform:none;">— auto-detected from your email</span></label>
+      <div id="li-position-badge" class="pill pill-neutral" style="display:none;padding:8px 14px;font-size:12.5px;"></div>
+      <select id="li-position" style="display:block;">
+        ${['ATC Tower','Approach Control','Area Control'].map(o=>`<option value="${o}" ${state.loginPosition===o?'selected':''}>${o}</option>`).join('')}
+      </select>
+      <div id="li-position-hint" style="font-size:11.5px;color:var(--text-faint);margin-top:6px;">Tip: emails starting with "area", "approach", or "tower" (e.g. area.rivera@…) are detected automatically.</div>
+    </div>
+    <div id="li-err" style="color:var(--red);font-size:12.5px;margin-bottom:10px;display:none;"></div>
+    <button class="btn btn-block" style="background:#fff;color:#3c4043;box-shadow:0 2px 10px rgba(0,0,0,0.2);" onclick="doGoogleLogin()">${icon('google',18)} Sign in with Google</button>
+
+    <div class="row" style="margin:18px 0;gap:10px;">
+      <div style="flex:1;height:1px;background:var(--line-soft);"></div>
+      <span style="font-size:11.5px;color:var(--text-faint);">OR CONTINUE WITH EMAIL</span>
+      <div style="flex:1;height:1px;background:var(--line-soft);"></div>
+    </div>
+
+    <div class="field">
+      <label>Controller Email</label>
+      <input id="li-id" type="email" placeholder="you@yourairport.com" autocomplete="username" oninput="updateDetectedPosition(this.value)">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="li-pass" type="password" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label>What should I call you?</label>
+      <input id="li-nickname" type="text" placeholder="e.g. Alex (optional — used in greetings)">
+    </div>
+    <button class="btn btn-secondary btn-block" onclick="doLogin()">${icon('unlock',16)} Sign In with Email</button>
+
+    <div style="text-align:center;">
+      <div class="biometric-btn ${state.scanning?'scanning':''}" onclick="doBiometric()">${icon('fingerprint',26)}</div>
+      <div style="font-size:11.5px;color:var(--text-faint);margin-top:4px;">${state.scanning? 'Scanning…' : 'Quick Sign-In (saved session)'}</div>
+    </div>
+
+    <div class="link-row">
+      <button class="link" onclick="state.showForgot=true;render()">Forgot Password?</button>
+      <button class="link" onclick="state.showEmergencyContacts=true;render()" style="color:var(--red);">Emergency Contacts</button>
+    </div>
+  </div>
+  ${state.showForgot? forgotModal() : ''}
+  ${state.showEmergencyContacts? emergencyContactsModal() : ''}
+  `;
+}
+function forgotModal(){
+  return `<div class="overlay" onclick="if(event.target===this){state.showForgot=false;render();}">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="disp" style="font-size:19px;margin-bottom:8px;">Reset Password</div>
+      <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5;margin-bottom:14px;">
+        Enter your account email — we'll send a password reset link to it.
+      </p>
+      <div class="field" style="margin-bottom:0;"><label>Email</label><input id="fp-email" type="email" placeholder="you@yourairport.com"></div>
+      <div id="fp-msg" style="font-size:12.5px;color:var(--radar);margin-top:10px;display:none;"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="sendPasswordReset()">Send Reset Link</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="state.showForgot=false;render()">Close</button>
+    </div>
+  </div>`;
+}
+async function sendPasswordReset(){
+  const email = document.getElementById('fp-email').value.trim();
+  const msg = document.getElementById('fp-msg');
+  if(!email){ return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  msg.style.display='block';
+  msg.textContent = error ? 'Could not send reset email — check the address and try again.' : 'Reset link sent — check your inbox.';
+  if(error) msg.style.color = 'var(--red)';
+}
+function emergencyContactsModal(){
+  const contacts = [
+    ['Tower Supervisor','+91 141 550 1122'],
+    ['ARFF / Fire Rescue','+91 141 550 1911'],
+    ['Airport Medical Centre','+91 141 550 1108'],
+    ['Airport Security Control','+91 141 550 1100'],
+  ];
+  return `<div class="overlay" onclick="if(event.target===this){state.showEmergencyContacts=false;render();}">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="row" style="margin-bottom:14px;">
+        ${icon('phone',20,'var(--red)')}
+        <div class="disp" style="font-size:19px;">Emergency Contacts</div>
+      </div>
+      ${contacts.map(c=>`
+        <div class="between" style="padding:12px 0;border-bottom:1px solid var(--line-soft);">
+          <div>
+            <div style="font-size:14px;font-weight:600;">${c[0]}</div>
+            <div class="mono" style="font-size:13px;color:var(--text-dim);">${c[1]}</div>
+          </div>
+          <div class="icon-btn" style="background:var(--red-dim);color:var(--red);border-color:var(--red);">${icon('phone',16)}</div>
+        </div>`).join('')}
+      <button class="btn btn-secondary btn-block" style="margin-top:16px;" onclick="state.showEmergencyContacts=false;render()">Close</button>
+    </div>
+  </div>`;
+}
+async function isEmailAllowed(email){
+  if(!email) return false;
+  const { data, error } = await sb.from('allowed_emails').select('email').eq('email', email.toLowerCase()).maybeSingle();
+  if(error) return false;
+  return !!data;
+}
+async function doGoogleLogin(){
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+  if(error) toast('Google sign-in failed: '+error.message);
+}
+async function doLogin(){
+  const email = document.getElementById('li-id').value.trim();
+  const pass = document.getElementById('li-pass').value;
+  const position = document.getElementById('li-position').value;
+  const nickname = document.getElementById('li-nickname').value.trim();
+  const err = document.getElementById('li-err');
+  err.style.display='none';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){
+    err.style.display='block';
+    err.textContent = 'Invalid email or password.';
+    return;
+  }
+  const allowed = await isEmailAllowed(email);
+  if(!allowed){
+    await sb.auth.signOut();
+    err.style.display='block';
+    err.textContent = 'This email is not authorized. Contact your administrator to be added to the access list.';
+    return;
+  }
+  let profile = await getProfile();
+  if(!profile){
+    err.style.display='block';
+    err.textContent = 'Signed in, but no controller profile was found for this account.';
+    return;
+  }
+  if(nickname && nickname !== profile.nickname){
+    await updateProfile({nickname});
+    profile = {...profile, nickname};
+  }
+  state.profile = {...profile, position};
+  state.loggedIn = true;
+  await startShift();
+  goto('dashboard');
+}
+async function doBiometric(){
+  if(state.scanning) return;
+  const position = document.getElementById('li-position') ? document.getElementById('li-position').value : state.loginPosition;
+  state.scanning = true;
+  render();
+  const { data:{ session } } = await sb.auth.getSession();
+  setTimeout(async ()=>{
+    state.scanning = false;
+    if(!session){
+      toast('No saved session on this device — sign in with email & password first.');
+      render();
+      return;
+    }
+    const allowed = await isEmailAllowed(session.user.email);
+    if(!allowed){
+      await sb.auth.signOut();
+      toast('This account is not authorized.');
+      render();
+      return;
+    }
+    const profile = await getProfile();
+    state.profile = {...profile, position};
+    state.loggedIn = true;
+    await startShift();
+    goto('dashboard');
+  }, 1200);
+}
+async function startShift(){
+  const log = {
+    id: Date.now(),
+    controllerId: state.profile.controllerId,
+    name: state.profile.name,
+    position: state.profile.position,
+    startTime: new Date().toISOString(),
+    endTime: null,
+    workSummary: '',
+  };
+  const list = await getShared('shiftLogs', []);
+  list.unshift(log);
+  await setShared('shiftLogs', list);
+  state.activeShiftLog = log.id;
+}
+function doLogout(){
+  state.showLogoutConfirm = true;
+  render();
+}
+function logoutModal(){
+  return `<div class="overlay" onclick="if(event.target===this){state.showLogoutConfirm=false;render();}">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="disp" style="font-size:19px;margin-bottom:6px;">End Shift</div>
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">Log a brief summary of the work completed this shift before signing out.</div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Work Summary</label>
+        <textarea id="lo-summary" placeholder="e.g. Handled 24 arrivals, 22 departures. Reported bird activity near RWY 27, resolved. Handed over to incoming controller."></textarea>
+      </div>
+      <button class="btn btn-danger btn-block" style="margin-top:16px;" onclick="finalizeLogout()">${icon('logout',16)} End Shift &amp; Logout</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="state.showLogoutConfirm=false;render()">Cancel</button>
+    </div>
+  </div>`;
+}
+async function finalizeLogout(){
+  const summary = document.getElementById('lo-summary').value.trim();
+  if(state.activeShiftLog){
+    const list = await getShared('shiftLogs', []);
+    const entry = list.find(l=>l.id===state.activeShiftLog);
+    if(entry){
+      entry.endTime = new Date().toISOString();
+      entry.workSummary = summary || 'No summary provided.';
+      await setShared('shiftLogs', list);
+    }
+  }
+  await sb.auth.signOut();
+  state.showLogoutConfirm = false;
+  state.activeShiftLog = null;
+  state.loggedIn=false; state.profile=null;
+  goto('login');
+}
+
+/* ============================= SHELL (topbar + bottomnav) ============================= */
+function shellTop(title,sub,showAdd){
+  return `<div class="topbar">
+    <div class="topbar-top">
+      <div>
+        <div class="greet disp">${title}</div>
+        ${sub?`<div class="greet-sub">${sub}</div>`:''}
+      </div>
+      <div class="row" style="gap:10px;">
+        ${showAdd? `<div class="icon-btn" onclick="openQuickAddWork()">${icon('plus',18)}</div>` : ''}
+        <div class="icon-btn bell-wrap" onclick="goto('notifications')">${icon('bell',18)}<span id="bell-indicator"></span></div>
+        <div class="avatar" onclick="goto('profile')">${initials(state.profile?.name)}</div>
+      </div>
+    </div>
+    <div class="airport-line">${icon('tower',13)} ${AIRPORT_NAME} <span class="sep">·</span> ${AIRPORT_CODE}</div>
+    <div class="utc-bar">${icon('clock',13)} UTC <span class="js-utc-time">${formatUTC().time}</span><span class="sep">·</span><span class="js-utc-date">${formatUTC().date}</span><span class="sep">·</span>${state.profile?.position||''}</div>
+  </div>`;
+}
+function bottomNav(){
+  const items = [
+    ['dashboard','home','Dashboard'],
+    ['notams','flag','NOTAMs'],
+    ['handover','clipboard','Handover'],
+    ['profile','user','Profile'],
+  ];
+  return `<div class="bottomnav">
+    <div class="sidebar-brand">${icon('tower',22)}<span>Shift Handover Pro</span></div>
+    ${items.map(([key,ic,label])=>`
+      <button class="nav-item ${state.screen===key?'active':''}" onclick="goto('${key}')">
+        ${icon(ic,20)}<span>${label}</span>
+      </button>`).join('')}
+  </div>`;
+}
+
+/* ============================= DASHBOARD ============================= */
+let dashCache = {eq:DEFAULT_EQUIPMENT, lastHandover:null, lastShiftLog:null, briefing:null};
+function shiftName(hour){
+  if(hour<12) return 'Morning';
+  if(hour<18) return 'Afternoon';
+  return 'Night';
+}
+async function loadDashboard(){
+  const [eqRaw, handovers, shiftLogs, briefing] = await Promise.all([
+    getShared('equipment', DEFAULT_EQUIPMENT),
+    getShared('handovers', []),
+    getShared('shiftLogs', []),
+    getShared('briefing', DEFAULT_BRIEFING),
+  ]);
+  const eq = normalizeEquipment(eqRaw);
+  const myPosition = normalizePosition(state.profile?.position);
+  const lastHandover = handovers.find(h => normalizePosition(h.position)===myPosition) || null;
+  const lastShiftLog = shiftLogs.find(l => l.endTime && normalizePosition(l.position)===myPosition && l.controllerId!==state.profile?.controllerId) || null;
+  const next = {eq, lastHandover, lastShiftLog, briefing};
+  if(JSON.stringify(next)===JSON.stringify(dashCache)) return; // nothing changed — skip the redraw
+  dashCache = next;
+  if(state.screen==='dashboard') render();
+}
+function renderDashboard(){
+  const p = state.profile || {};
+  const eq = dashCache.eq;
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour<12?'Good Morning':hour<17?'Good Afternoon':'Good Evening';
+  const localDate = now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const localTime = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+  return `
+  ${shellTop(greeting+', Officer '+(p.nickname||firstName(p.name)), p.role+' · '+p.position, true)}
+  <div class="screen px">
+    <div class="section-label">Current Shift</div>
+    <div class="card">
+      <div class="between" style="margin-bottom:12px;">
+        <span class="pill pill-op">${icon('dot',10)} On Duty</span>
+        <span class="pill pill-blue">${shiftName(hour)} Shift</span>
+      </div>
+      <div class="grid3">
+        <div>
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;">Date</div>
+          <div class="mono" style="font-size:13.5px;margin-top:2px;">${localDate}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;">Time</div>
+          <div class="mono" style="font-size:13.5px;margin-top:2px;">${localTime}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;">Unit</div>
+          <div class="mono" style="font-size:13.5px;margin-top:2px;">${p.position||'ATC Tower'}</div>
+        </div>
+      </div>
+    </div>
+
+    ${lastShiftSummaryCard()}
+
+    ${liveWorkCard()}
+
+    <div class="section-label">Equipment</div>
+    <div class="card">
+      <div class="row" style="flex-wrap:wrap;gap:14px 20px;">
+        ${Object.keys(EQUIPMENT_LABELS).map(k=>eqDot(EQUIPMENT_LABELS[k], eq[k])).join('')}
+      </div>
+    </div>
+
+    <div class="section-label">Quick Actions</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-primary btn-block" onclick="startNewHandover()">${icon('clipboard',16)} Create Handover</button>
+      <button class="btn btn-secondary btn-block" onclick="goto('handover')">${icon('list',16)} Pending Tasks</button>
+    </div>
+  </div>
+  ${bottomNav()}
+  ${state.showQuickAddWork? quickAddWorkModal() : ''}
+  ${state.workDetail!==null? workDetailModal() : ''}
+  `;
+}
+function timeAgo(iso){
+  if(!iso) return '';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs/60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return mins+' min ago';
+  const hrs = Math.round(mins/60);
+  if(hrs < 24) return hrs+'h ago';
+  return Math.round(hrs/24)+'d ago';
+}
+function lastShiftSummaryCard(){
+  const h = dashCache.lastHandover;
+  const l = dashCache.lastShiftLog;
+  if(!h && !l) return '';
+  return `
+    <div class="section-label">Briefing From Last Shift</div>
+    <div class="card" style="border-left:3px solid var(--blue);">
+      ${h ? `
+        <div class="between" style="margin-bottom:8px;">
+          <span style="font-weight:700;font-size:14.5px;">${h.outgoing} → ${h.incoming}</span>
+          <span style="font-size:11px;color:var(--text-faint);">${timeAgo(h.createdAt)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">${h.date} · ${h.shiftTime} · ${h.position}</div>
+        ${h.pendingTasks?.length? `<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Pending Tasks</div><div class="chip-row">${h.pendingTasks.map(t=>`<span class="chip on">${t}</span>`).join('')}</div></div>` : ''}
+        ${h.safetyAlerts?.length? `<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Safety Alerts</div><div class="chip-row">${h.safetyAlerts.map(t=>`<span class="chip" style="border-color:var(--red);color:var(--red);">${t}</span>`).join('')}</div></div>` : ''}
+        ${h.remarks? `<div style="font-size:13.5px;color:var(--text-dim);">${h.remarks}</div>` : ''}
+      ` : ''}
+      ${(l && l.workSummary) ? `
+        ${h? '<div class="hr"></div>' : ''}
+        <div class="between" style="margin-bottom:6px;">
+          <span style="font-weight:600;font-size:13px;">${l.name}'s shift summary</span>
+          <span style="font-size:11px;color:var(--text-faint);">${timeAgo(l.endTime)}</span>
+        </div>
+        <div style="font-size:13.5px;color:var(--text-dim);">${l.workSummary}</div>
+      ` : ''}
+    </div>
+  `;
+}
+function classifyWork(w, now){
+  if(w.done) return 'done';
+  if(!w.startAt && !w.endAt) return 'live';
+  const start = w.startAt ? new Date(w.startAt) : null;
+  const end = w.endAt ? new Date(w.endAt) : null;
+  if(start && now < start) return 'upcoming';
+  if(end && now > end) return 'expired';
+  return 'live';
+}
+function liveWorkCard(){
+  const b = dashCache.briefing;
+  if(!b || !b.ongoingWork || b.ongoingWork.length===0) return '';
+  const now = new Date();
+  const items = b.ongoingWork.map((w,i)=>({...w, _idx:i, _status: classifyWork(w, now)}))
+    .filter(w=> w._status!=='expired' && w._status!=='done');
+  const live = items.filter(w=>w._status==='live');
+  const upcoming = items.filter(w=>w._status==='upcoming');
+  if(live.length===0 && upcoming.length===0) return '';
+  return `
+    <div class="section-label">Live &amp; Upcoming Work</div>
+    <div class="card">
+      ${live.map(w=>workRow(w,'pill-op','Live')).join('')}
+      ${upcoming.map(w=>workRow(w,'pill-blue','Upcoming')).join('')}
+    </div>
+  `;
+}
+function workRow(w,pillClass,label){
+  return `<div class="worklist-item" style="cursor:pointer;" onclick="openWorkDetail(${w._idx})">
+    <span class="pill ${pillClass}" style="flex-shrink:0;">${label}</span>
+    <div style="flex:1;">
+      <div style="font-size:13.5px;">${w.text}</div>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">${w.addedBy} · ${w.time}</div>
+    </div>
+  </div>`;
+}
+function openWorkDetail(idx){
+  state.workDetail = idx;
+  render();
+}
+function workDetailModal(){
+  const w = dashCache.briefing.ongoingWork[state.workDetail];
+  if(!w) return '';
+  return `<div class="overlay" onclick="if(event.target===this){state.workDetail=null;render();}">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="disp" style="font-size:19px;margin-bottom:14px;">Work Entry Detail</div>
+      ${detailRow('Entered By', w.addedBy)}
+      ${detailRow('Time of Entry', w.createdAt? new Date(w.createdAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : w.time)}
+      ${w.startAt? detailRow('Starts', new Date(w.startAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})) : ''}
+      ${w.endAt? detailRow('Ends', new Date(w.endAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})) : ''}
+      <div class="hr"></div>
+      <label>Full Description</label>
+      <div style="font-size:14px;color:var(--text-dim);margin-top:6px;">${w.text}</div>
+      <button class="btn ${w.done?'btn-secondary':'btn-primary'} btn-block" style="margin-top:18px;" onclick="toggleWorkDone(${state.workDetail})">${icon('check',15)} ${w.done?'Mark as Not Done':'Mark as Done'}</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="state.workDetail=null;render()">Close</button>
+    </div>
+  </div>`;
+}
+async function toggleWorkDone(idx){
+  const b = await getShared('briefing', DEFAULT_BRIEFING);
+  if(b.ongoingWork[idx]){
+    b.ongoingWork[idx].done = !b.ongoingWork[idx].done;
+    await setShared('briefing', b);
+  }
+  state.workDetail = null;
+  dashCache.briefing = b;
+  toast('Updated ✓');
+  render();
+}
+function openQuickAddWork(){
+  state.showQuickAddWork = true;
+  render();
+}
+function quickAddWorkModal(){
+  return `<div class="overlay" onclick="if(event.target===this){state.showQuickAddWork=false;render();}">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="disp" style="font-size:19px;margin-bottom:14px;">Add Work / Description</div>
+      <div class="field"><label>Description</label><textarea placeholder="What's happening or needs attention…" id="qa-desc"></textarea></div>
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:10px;">Leave start/end blank for something happening right now.</div>
+      <div class="grid2">
+        <div class="field"><label>Starts (optional)</label><input type="datetime-local" id="qa-start"></div>
+        <div class="field"><label>Ends (optional)</label><input type="datetime-local" id="qa-end"></div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="submitQuickAddWork()">${icon('check',16)} Add</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="state.showQuickAddWork=false;render()">Cancel</button>
+    </div>
+  </div>`;
+}
+async function submitQuickAddWork(){
+  const text = document.getElementById('qa-desc').value.trim();
+  if(!text){ toast('Description is required.'); return; }
+  const startVal = document.getElementById('qa-start').value;
+  const endVal = document.getElementById('qa-end').value;
+  const b = await getShared('briefing', DEFAULT_BRIEFING);
+  b.ongoingWork.unshift({
+    id: Date.now(),
+    text,
+    addedBy: state.profile?.name || 'Controller',
+    time: formatUTC().time,
+    createdAt: new Date().toISOString(),
+    startAt: startVal ? new Date(startVal).toISOString() : null,
+    endAt: endVal ? new Date(endVal).toISOString() : null,
+    done: false,
+  });
+  await setShared('briefing', b);
+  state.showQuickAddWork = false;
+  dashCache.briefing = b;
+  toast('Added ✓');
+  render();
+}
+function eqDot(label,eq){
+  const st = (eq && typeof eq==='object') ? eq.status : eq; // tolerate legacy plain-string values
+  const validUntil = (eq && typeof eq==='object') ? eq.validUntil : null;
+  const cls = st==='operational'?'dot-op':st==='maintenance'?'dot-maint':'dot-fault'; // dot-fault CSS retained (shared with safety alerts)
+  // treat both 'offline' and any unrecognised value as the red dot
+  const isExpired = validUntil && new Date(validUntil) < new Date();
+  return `<div style="display:flex;flex-direction:column;gap:2px;">
+    <div class="row" style="gap:6px;"><span class="dot ${cls}"></span><span style="font-size:12.5px;color:var(--text-dim);">${label}</span></div>
+    ${validUntil? `<span style="font-size:10px;margin-left:15px;color:${isExpired?'var(--red)':'var(--text-faint)'};">${isExpired?'Expired ':'Until '}${new Date(validUntil).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>` : ''}
+  </div>`;
+}
+
+/* ============================= NOTAMs ============================= */
+let notamsCache = [];
+async function loadNotams(){
+  const next = await getShared('notams', []);
+  if(JSON.stringify(next)===JSON.stringify(notamsCache)) return;
+  notamsCache = next;
+  if(state.screen==='notams') render();
+}
+function notamDT(dateStr,timeStr){
+  if(!dateStr) return null;
+  return new Date(dateStr+'T'+(timeStr||'00:00'));
+}
+function renderNotams(){
+  const now = new Date();
+  const sorted = [...notamsCache].sort((a,b)=> notamDT(a.startDate,a.startTime) - notamDT(b.startDate,b.startTime));
+  return `
+  ${shellTop('NOTAMs','Notices to Air Missions')}
+  <div class="screen px">
+    <div class="between" style="margin-top:26px;margin-bottom:10px;">
+      <div class="section-label" style="margin:0;flex:1;">Active &amp; Upcoming (${notamsCache.length})</div>
+      <button class="btn btn-secondary btn-sm" onclick="openAddNotam()">${icon('list',14)} Add</button>
+    </div>
+    ${sorted.length===0? `<div class="empty-state">${icon('flag',34)}<div style="margin-top:10px;">No NOTAMs logged.</div></div>` :
+      sorted.map((n)=>{
+        const start = notamDT(n.startDate,n.startTime);
+        const end = notamDT(n.endDate,n.endTime);
+        const isActive = start && end && now>=start && now<=end;
+        const isExpired = end && now>end;
+        const cls = isExpired ? 'delayed' : isActive ? 'dep' : 'arr';
+        const statusLabel = isExpired ? 'Expired' : isActive ? 'Active' : 'Upcoming';
+        const statusPill = isExpired ? 'pill-neutral' : isActive ? 'pill-op' : 'pill-blue';
+        return `<div class="strip ${cls}">
+          <div class="strip-top">
+            <span class="strip-call" style="font-size:14px;">${n.startDate} ${n.startTime} → ${n.endDate} ${n.endTime}</span>
+            <span class="pill ${statusPill}">${statusLabel}</span>
+          </div>
+          <div style="font-size:13.5px;color:var(--text-dim);margin-top:4px;">${n.description}</div>
+        </div>`;
+      }).join('')
+    }
+  </div>
+  ${bottomNav()}
+  ${state.showAddNotam? addNotamModal() : ''}
+  `;
+}
+function openAddNotam(){
+  state.showAddNotam = true;
+  render();
+}
+function addNotamModal(){
+  return `<div class="overlay" onclick="if(event.target===this){state.showAddNotam=false;render();}">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="disp" style="font-size:19px;margin-bottom:14px;">Add NOTAM</div>
+      <div class="grid2">
+        <div class="field"><label>Start Date</label><input type="date" id="nt-start-date"></div>
+        <div class="field"><label>Start Time</label><input type="time" id="nt-start-time"></div>
+        <div class="field"><label>End Date</label><input type="date" id="nt-end-date"></div>
+        <div class="field"><label>End Time</label><input type="time" id="nt-end-time"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>NOTAM Description</label><textarea placeholder="Full NOTAM text…" id="nt-desc"></textarea></div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="submitAddNotam()">${icon('check',16)} Save NOTAM</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="state.showAddNotam=false;render()">Cancel</button>
+    </div>
+  </div>`;
+}
+async function submitAddNotam(){
+  const startDate = document.getElementById('nt-start-date').value;
+  const startTime = document.getElementById('nt-start-time').value;
+  const endDate = document.getElementById('nt-end-date').value;
+  const endTime = document.getElementById('nt-end-time').value;
+  const description = document.getElementById('nt-desc').value.trim();
+  if(!startDate || !endDate || !description){ toast('Start date, end date, and description are required.'); return; }
+  const entry = {
+    id: Date.now(),
+    startDate, startTime: startTime||'00:00',
+    endDate, endTime: endTime||'23:59',
+    description,
+    addedBy: state.profile?.name || 'Controller',
+    createdAt: new Date().toISOString(),
+  };
+  const list = await getShared('notams', []);
+  list.unshift(entry);
+  await setShared('notams', list);
+  await pushNotification('New NOTAM', description.slice(0,80), 'notam');
+  state.showAddNotam = false;
+  toast('NOTAM added ✓');
+  await loadNotams();
+}
+function detailRow(label,val){
+  return `<div style="margin-bottom:12px;"><div style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.05em;">${label}</div><div class="mono" style="font-size:14.5px;margin-top:2px;">${val}</div></div>`;
+}
+
+/* ============================= HANDOVER (create + history) ============================= */
+function blankDraft(){
+  const now = new Date();
+  return {
+    id:null,
+    date: now.toISOString().slice(0,10),
+    shiftTime:'06:00–14:00',
+    outgoing: state.profile?.name || '',
+    incoming:'',
+    position:'Tower',
+    weather:{wind:'270° / 12 kt', visibility:'8 km', qnh:'1013', temp:'27°C', clouds:'Few, 3500 ft', rainFog:'None'},
+    runwayActive:'27', runwayClosed:'', taxiway:'All taxiways operational',
+    approachOps:{sequence:'', holdingStack:'', vectoringNotes:''},
+    areaOps:{sectorTraffic:'', handoffs:'', enrouteConflicts:''},
+    equipment:freshEquipment(),
+    flightOps:{arrivals:24,departures:22,delayed:1,holding:1,vip:1},
+    pendingTasks:[], safetyAlerts:[], remarks:'',
+    sigOut:null, sigIn:null,
+    createdAt:null,
+  };
+}
+function startNewHandover(){
+  state.draft = blankDraft();
+  state.handoverTab='create';
+  goto('handover');
+}
+function ensureDraft(){ if(!state.draft) state.draft = blankDraft(); }
+
+function renderHandover(){
+  ensureDraft();
+  return `
+  ${shellTop('Shift Handover','Create, review & archive')}
+  <div class="screen px">
+    <div class="tabs-scroll">
+      <button class="tab ${state.handoverTab==='create'?'active':''}" onclick="state.handoverTab='create';render()">Create</button>
+      <button class="tab ${state.handoverTab==='briefing'?'active':''}" onclick="state.handoverTab='briefing';loadBriefing()">Briefing</button>
+      <button class="tab ${state.handoverTab==='log'?'active':''}" onclick="state.handoverTab='log';loadWorkLog()">Log</button>
+      <button class="tab ${state.handoverTab==='shiftlog'?'active':''}" onclick="state.handoverTab='shiftlog';loadShiftLogs()">Shift Log</button>
+      <button class="tab ${state.handoverTab==='history'?'active':''}" onclick="state.handoverTab='history';loadHistory()">History</button>
+    </div>
+    ${state.handoverTab==='create'? renderCreateForm() : ''}
+    ${state.handoverTab==='briefing'? (state.briefing? renderBriefing() : '<div class="empty-state">Loading…</div>') : ''}
+    ${state.handoverTab==='log'? (workLogCache? renderWorkLog() : '<div class="empty-state">Loading…</div>') : ''}
+    ${state.handoverTab==='shiftlog'? (shiftLogsCache? renderShiftLog() : '<div class="empty-state">Loading…</div>') : ''}
+    ${state.handoverTab==='history'? (historyCache? renderHistory() : '<div class="empty-state">Loading…</div>') : ''}
+  </div>
+  ${bottomNav()}
+  ${state.handoverDetail!==null? handoverDetailModal() : ''}
+  `;
+}
+
+/* ---------- Briefing ---------- */
+async function loadBriefing(){
+  state.briefing = await getShared('briefing', DEFAULT_BRIEFING);
+  render();
+}
+function renderBriefing(){
+  const b = state.briefing;
+  return `
+    <div class="section-label" style="margin-top:0;">Ongoing Work</div>
+    <div class="card">
+      ${b.ongoingWork.length===0? `<div style="color:var(--text-faint);font-size:13px;padding:8px 0;">No ongoing work logged.</div>` :
+        b.ongoingWork.map(w=>`
+        <div class="worklist-item">
+          ${icon('tool',15,'var(--amber)')}
+          <div style="flex:1;">
+            <div style="font-size:13.5px;">${w.text}</div>
+            <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">${w.addedBy} · ${w.time}</div>
+          </div>
+          <span class="x" onclick="removeWork(${w.id})">${icon('back',13)}</span>
+        </div>`).join('')
+      }
+      <div class="add-row">
+        <input type="text" placeholder="Add ongoing work item…" id="new-work" value="${state.newWorkText}" oninput="state.newWorkText=this.value">
+        <button class="btn btn-secondary btn-sm" onclick="addWork()">Add</button>
+      </div>
+    </div>
+
+    <div class="section-label">Today's Duty Schedule</div>
+    <div class="card">
+      ${b.schedule.map(s=>`
+        <div class="between" style="padding:10px 0;border-bottom:1px solid var(--line-soft);">
+          <div>
+            <div style="font-size:13.5px;font-weight:600;">${s.controller}</div>
+            <div style="font-size:11.5px;color:var(--text-dim);">${s.position}</div>
+          </div>
+          <div class="row">
+            <span class="mono" style="font-size:12.5px;color:var(--text-dim);">${s.time}</span>
+            <span class="x" onclick="removeSchedule(${s.id})">${icon('back',13)}</span>
+          </div>
+        </div>`).join('')}
+      <div class="grid2" style="margin-top:10px;">
+        <div class="field" style="margin-bottom:0;"><input type="text" placeholder="Time (e.g. 22:00–06:00)" id="ns-time" oninput="state.newSchedule.time=this.value"></div>
+        <div class="field" style="margin-bottom:0;"><input type="text" placeholder="Controller name" id="ns-ctrl" oninput="state.newSchedule.controller=this.value"></div>
+      </div>
+      <div class="add-row">
+        <select id="ns-pos" onchange="state.newSchedule.position=this.value" style="flex:1;">
+          ${['ATC Tower','Approach Control','Area Control'].map(o=>`<option ${state.newSchedule.position===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="addSchedule()">Add</button>
+      </div>
+    </div>
+  `;
+}
+async function addWork(){
+  const text = (document.getElementById('new-work').value||'').trim();
+  if(!text) return;
+  state.briefing.ongoingWork.unshift({id:Date.now(), text, addedBy: state.profile?.name||'Controller', time: formatUTC().time});
+  await setShared('briefing', state.briefing);
+  state.newWorkText='';
+  render();
+}
+async function removeWork(id){
+  state.briefing.ongoingWork = state.briefing.ongoingWork.filter(w=>w.id!==id);
+  await setShared('briefing', state.briefing);
+  render();
+}
+async function addSchedule(){
+  const s = state.newSchedule;
+  if(!s.time.trim() || !s.controller.trim()){ toast('Enter time and controller name.'); return; }
+  state.briefing.schedule.push({id:Date.now(), time:s.time, position:s.position, controller:s.controller});
+  await setShared('briefing', state.briefing);
+  state.newSchedule = {time:'',position:'ATC Tower',controller:''};
+  render();
+}
+async function removeSchedule(id){
+  state.briefing.schedule = state.briefing.schedule.filter(s=>s.id!==id);
+  await setShared('briefing', state.briefing);
+  render();
+}
+
+/* ---------- Work Log (Apron / Office / VIP Movement / Billing) ---------- */
+let workLogCache = null;
+const WORK_LOG_TYPES = ['Apron Work','Office Work','VIP Movement','Billing'];
+async function loadWorkLog(){
+  workLogCache = await getShared('workLog', []);
+  render();
+}
+function renderWorkLog(){
+  const list = workLogCache || [];
+  const d = state.workLogDraft;
+  return `
+    <div class="section-label" style="margin-top:0;">Add Entry</div>
+    <div class="card">
+      <div class="field">
+        <label>Type</label>
+        <select onchange="state.workLogDraft.type=this.value;render()">
+          ${WORK_LOG_TYPES.map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      ${d.type==='Billing' ? `
+        <div class="grid2">
+          <div class="field"><label>Callsign</label><input type="text" placeholder="e.g. AI202" oninput="state.workLogDraft.callsign=this.value"></div>
+          <div class="field"><label>Registration</label><input type="text" placeholder="e.g. VT-EXU" oninput="state.workLogDraft.registration=this.value"></div>
+          <div class="field"><label>Departure</label><input type="text" placeholder="e.g. DEL" oninput="state.workLogDraft.departure=this.value"></div>
+          <div class="field"><label>Destination</label><input type="text" placeholder="e.g. JAI" oninput="state.workLogDraft.destination=this.value"></div>
+        </div>
+        <div class="field"><label>Date &amp; Time</label><input type="datetime-local" oninput="state.workLogDraft.startAt=this.value"></div>
+      ` : `
+        <div class="grid2">
+          <div class="field"><label>Start Date &amp; Time</label><input type="datetime-local" oninput="state.workLogDraft.startAt=this.value"></div>
+          <div class="field"><label>End Date &amp; Time</label><input type="datetime-local" oninput="state.workLogDraft.endAt=this.value"></div>
+        </div>
+      `}
+      <div class="field" style="margin-bottom:0;"><label>Description</label><textarea placeholder="Details…" oninput="state.workLogDraft.description=this.value"></textarea></div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="submitWorkLog()">${icon('check',15)} Save Entry</button>
+    </div>
+
+    <div class="section-label">Recent Entries</div>
+    ${list.length===0? `<div class="empty-state">${icon('clipboard',34)}<div style="margin-top:10px;">No entries logged yet.</div></div>` :
+      list.map((e,i)=>`
+      <div class="card" style="margin-bottom:10px;${e.done?'opacity:0.55;':''}">
+        <div class="row" style="align-items:flex-start;gap:10px;">
+          <div class="checkbox-toggle ${e.done?'on':''}" onclick="toggleWorkLogDone(${i})">${e.done? icon('check',13,'#05130F') : ''}</div>
+          <div style="flex:1;">
+            <div class="between" style="margin-bottom:6px;">
+              <span class="pill pill-blue">${e.type}</span>
+              <span style="font-size:11px;color:var(--text-faint);">${timeAgo(e.createdAt)}</span>
+            </div>
+            ${e.type==='Billing' ? `
+              <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px;" class="mono">${e.callsign||'-'} · ${e.registration||'-'} · ${e.departure||'-'} → ${e.destination||'-'}</div>
+            ` : `
+              <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;">${e.startAt? new Date(e.startAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'} → ${e.endAt? new Date(e.endAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</div>
+            `}
+            <div style="font-size:13.5px;${e.done?'text-decoration:line-through;':''}">${e.description||'—'}</div>
+            <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Logged by ${e.addedBy}${e.done?' · ✓ Checked':''}</div>
+          </div>
+        </div>
+      </div>`).join('')
+    }
+  `;
+}
+async function toggleWorkLogDone(i){
+  const list = await getShared('workLog', []);
+  if(list[i]){
+    list[i].done = !list[i].done;
+    await setShared('workLog', list);
+  }
+  workLogCache = list;
+  render();
+}
+function blankWorkLogDraft(){
+  return {type:'Apron Work', startAt:'', endAt:'', callsign:'', registration:'', departure:'', destination:'', description:'', done:false};
+}
+async function submitWorkLog(){
+  const d = state.workLogDraft;
+  if(!d.description.trim()){ toast('Description is required.'); return; }
+  const entry = {
+    id: Date.now(),
+    type: d.type,
+    description: d.description.trim(),
+    addedBy: state.profile?.name || 'Controller',
+    createdAt: new Date().toISOString(),
+    done: false,
+  };
+  if(d.type==='Billing'){
+    entry.callsign = d.callsign; entry.registration = d.registration;
+    entry.departure = d.departure; entry.destination = d.destination;
+    entry.startAt = d.startAt ? new Date(d.startAt).toISOString() : null;
+  } else {
+    entry.startAt = d.startAt ? new Date(d.startAt).toISOString() : null;
+    entry.endAt = d.endAt ? new Date(d.endAt).toISOString() : null;
+  }
+  const list = await getShared('workLog', []);
+  list.unshift(entry);
+  await setShared('workLog', list);
+  state.workLogDraft = blankWorkLogDraft();
+  toast(d.type+' entry saved ✓');
+  await loadWorkLog();
+}
+
+/* ---------- Shift Log ---------- */
+let shiftLogsCache = null;
+async function loadShiftLogs(){
+  shiftLogsCache = await getShared('shiftLogs', []);
+  render();
+}
+function durationStr(startIso,endIso){
+  if(!endIso) return 'In progress';
+  const ms = new Date(endIso)-new Date(startIso);
+  const h = Math.floor(ms/3600000), m = Math.round((ms%3600000)/60000);
+  return h+'h '+m+'m';
+}
+function renderShiftLog(){
+  const logs = shiftLogsCache || [];
+  return `
+    <div style="font-size:12px;color:var(--text-faint);margin-bottom:12px;">Shift records are retained for a minimum of 7 days.</div>
+    ${logs.length===0? `<div class="empty-state">${icon('clock',34)}<div style="margin-top:10px;">No shift records yet.</div></div>` :
+      logs.map(l=>`
+      <div class="shift-card ${!l.endTime?'open':''}">
+        <div class="between" style="margin-bottom:6px;">
+          <span style="font-weight:700;font-size:14.5px;">${l.name}</span>
+          <span class="pill ${!l.endTime?'pill-op':'pill-neutral'}">${!l.endTime?'On Duty':'Ended'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;">${l.position}</div>
+        <div class="row" style="gap:16px;margin-bottom:6px;">
+          <div>
+            <div style="font-size:10.5px;color:var(--text-faint);text-transform:uppercase;">Start</div>
+            <div class="mono" style="font-size:12.5px;">${new Date(l.startTime).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+          <div>
+            <div style="font-size:10.5px;color:var(--text-faint);text-transform:uppercase;">End</div>
+            <div class="mono" style="font-size:12.5px;">${l.endTime? new Date(l.endTime).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</div>
+          </div>
+          <div>
+            <div style="font-size:10.5px;color:var(--text-faint);text-transform:uppercase;">Duration</div>
+            <div class="mono" style="font-size:12.5px;">${durationStr(l.startTime,l.endTime)}</div>
+          </div>
+        </div>
+        ${l.workSummary?`<div class="hr"></div><div style="font-size:13px;color:var(--text-dim);"><strong style="color:var(--text);">Work done:</strong> ${l.workSummary}</div>`:''}
+      </div>`).join('')
+    }
+  `;
+}
+
+function renderCreateForm(){
+  const d = state.draft;
+  return `
+    <div class="section-label">Shift Details</div>
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label>Date</label><input type="date" value="${d.date}" oninput="d('date',this.value)"></div>
+        <div class="field"><label>Shift Time</label><input type="text" value="${d.shiftTime}" oninput="d('shiftTime',this.value)"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Outgoing Controller</label><input type="text" value="${d.outgoing}" oninput="d('outgoing',this.value)"></div>
+        <div class="field"><label>Incoming Controller</label><input type="text" placeholder="Name" value="${d.incoming}" oninput="d('incoming',this.value)"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Position</label>
+        <select onchange="d('position',this.value);render()">
+          ${['Tower','Ground','Approach','Area','Radar'].map(o=>`<option ${d.position===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label">Weather</div>
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label>Wind</label><input type="text" value="${d.weather.wind}" oninput="dw('wind',this.value)"></div>
+        <div class="field"><label>Visibility</label><input type="text" value="${d.weather.visibility}" oninput="dw('visibility',this.value)"></div>
+        <div class="field"><label>QNH</label><input type="text" value="${d.weather.qnh}" oninput="dw('qnh',this.value)"></div>
+        <div class="field"><label>Temperature</label><input type="text" value="${d.weather.temp}" oninput="dw('temp',this.value)"></div>
+        <div class="field"><label>Cloud Condition</label><input type="text" value="${d.weather.clouds}" oninput="dw('clouds',this.value)"></div>
+        <div class="field" style="margin-bottom:0;"><label>Rain / Fog</label><input type="text" value="${d.weather.rainFog}" oninput="dw('rainFog',this.value)"></div>
+      </div>
+    </div>
+
+    ${(d.position==='Tower' || d.position==='Ground') ? `
+    <div class="section-label">Runway &amp; Taxiway</div>
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label>Active Runway</label><input type="text" value="${d.runwayActive}" oninput="d('runwayActive',this.value)"></div>
+        <div class="field"><label>Closed Runway</label><input type="text" placeholder="None" value="${d.runwayClosed}" oninput="d('runwayClosed',this.value)"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>Taxiway Status</label><input type="text" value="${d.taxiway}" oninput="d('taxiway',this.value)"></div>
+    </div>
+    ` : ''}
+
+    ${(d.position==='Approach' || d.position==='Radar') ? `
+    <div class="section-label">Approach Operations</div>
+    <div class="card">
+      <div class="field"><label>Aircraft in Sequence</label><input type="text" placeholder="e.g. 4 inbound, spaced 8nm" value="${d.approachOps.sequence}" oninput="dao('sequence',this.value)"></div>
+      <div class="field"><label>Holding Stack</label><input type="text" placeholder="e.g. 2 aircraft holding at ROTON" value="${d.approachOps.holdingStack}" oninput="dao('holdingStack',this.value)"></div>
+      <div class="field" style="margin-bottom:0;"><label>Vectoring / Spacing Notes</label><textarea placeholder="Vectoring instructions, spacing issues, go-arounds…" oninput="dao('vectoringNotes',this.value)">${d.approachOps.vectoringNotes}</textarea></div>
+    </div>
+    ` : ''}
+
+    ${(d.position==='Area') ? `
+    <div class="section-label">Area Control Operations</div>
+    <div class="card">
+      <div class="field"><label>Sector Traffic Count</label><input type="text" placeholder="e.g. 18 aircraft in sector" value="${d.areaOps.sectorTraffic}" oninput="daa('sectorTraffic',this.value)"></div>
+      <div class="field"><label>Adjacent Sector Handoffs</label><input type="text" placeholder="e.g. 3 pending handoff to Delhi Area" value="${d.areaOps.handoffs}" oninput="daa('handoffs',this.value)"></div>
+      <div class="field" style="margin-bottom:0;"><label>En-route Conflicts / Notes</label><textarea placeholder="Conflict alerts, weather deviations, military airspace activity…" oninput="daa('enrouteConflicts',this.value)">${d.areaOps.enrouteConflicts}</textarea></div>
+    </div>
+    ` : ''}
+
+    <div class="section-label">Equipment</div>
+    <div class="card">
+      ${eqRow('radar','Radar',d)}${eqRow('radio','Radio',d)}${eqRow('ils','ILS',d)}
+      ${eqRow('dvor','DVOR',d)}${eqRow('adsb','ADS-B',d)}${eqRow('surfaceRadar','Surface Radar',d)}
+    </div>
+
+    <div class="section-label">Flight Operations</div>
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label>Arrivals</label><input type="number" value="${d.flightOps.arrivals}" oninput="dfo('arrivals',this.value)"></div>
+        <div class="field"><label>Departures</label><input type="number" value="${d.flightOps.departures}" oninput="dfo('departures',this.value)"></div>
+        <div class="field"><label>Delayed Flights</label><input type="number" value="${d.flightOps.delayed}" oninput="dfo('delayed',this.value)"></div>
+        <div class="field"><label>Holding Aircraft</label><input type="number" value="${d.flightOps.holding}" oninput="dfo('holding',this.value)"></div>
+        <div class="field" style="margin-bottom:0;grid-column:1/3;"><label>VIP Flights</label><input type="number" value="${d.flightOps.vip}" oninput="dfo('vip',this.value)"></div>
+      </div>
+    </div>
+
+    <div class="section-label">Pending Tasks</div>
+    <div class="card">
+      ${chipList(['Runway Inspection','Bird Activity','Fuel Coordination','Maintenance Request'], d.pendingTasks, 'pendingTasks')}
+    </div>
+
+    <div class="section-label">Safety Alerts</div>
+    <div class="card">
+      ${chipList(['Bird Strike','Vehicle on Runway','Communication Failure','Medical Emergency','Security Alert'], d.safetyAlerts, 'safetyAlerts')}
+    </div>
+
+    <div class="section-label">Remarks</div>
+    <div class="card">
+      <textarea placeholder="Important notes for the incoming controller…" oninput="d('remarks',this.value)">${d.remarks}</textarea>
+    </div>
+
+    <div class="section-label">Digital Signatures</div>
+    <div class="grid2">
+      <div class="card">
+        <label>Outgoing Controller</label>
+        <canvas id="sigOut" class="sig-canvas" width="200" height="110"></canvas>
+        <button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;" onclick="clearSig('sigOut')">Clear</button>
+      </div>
+      <div class="card">
+        <label>Incoming Controller</label>
+        <canvas id="sigIn" class="sig-canvas" width="200" height="110"></canvas>
+        <button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;" onclick="clearSig('sigIn')">Clear</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" style="margin-top:22px;" onclick="submitHandover()">${icon('check',16)} Complete Handover</button>
+  `;
+}
+function eqRow(key,label,d){
+  const eq = d.equipment[key] || {status:'operational', validUntil:null};
+  const st = eq.status;
+  return `<div style="padding:9px 0;border-bottom:1px solid var(--line-soft);">
+    <div class="between">
+      <span style="font-size:13.5px;">${label}</span>
+      <div class="eq-select" style="width:180px;">
+        ${['operational','maintenance','offline'].map(s=>`<div class="eq-opt ${s==='operational'?'op':s==='maintenance'?'maint':'offline'} ${st===s?'on':''}" onclick="deq('${key}','${s}')">${s==='operational'?'OK':s==='maintenance'?'MAINT':'OFFL'}</div>`).join('')}
+      </div>
+    </div>
+    ${st!=='operational' ? `
+    <div style="margin-top:8px;">
+      <label style="font-size:10.5px;margin-bottom:4px;">Valid Until</label>
+      <input type="datetime-local" value="${toDatetimeLocal(eq.validUntil)}" oninput="deqExpiry('${key}', this.value)">
+    </div>` : ''}
+  </div>`;
+}
+function toDatetimeLocal(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  const pad = n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function chipList(options, selected, field){
+  return `<div class="chip-row">${options.map(o=>`<div class="chip ${selected.includes(o)?'on':''}" onclick="toggleChip('${field}','${o.replace(/'/g,"\\'")}')">${o}</div>`).join('')}</div>`;
+}
+function toggleChip(field,val){
+  const arr = state.draft[field];
+  const i = arr.indexOf(val);
+  if(i>-1) arr.splice(i,1); else arr.push(val);
+  render();
+}
+function d(field,val){ state.draft[field]=val; }
+function dw(field,val){ state.draft.weather[field]=val; }
+function dfo(field,val){ state.draft.flightOps[field]=Number(val); }
+function dao(field,val){ state.draft.approachOps[field]=val; }
+function daa(field,val){ state.draft.areaOps[field]=val; }
+function deq(field,val){
+  const current = state.draft.equipment[field];
+  if(!current || typeof current !== 'object'){ state.draft.equipment[field] = {status:val, validUntil:null}; }
+  else { current.status = val; if(val==='operational') current.validUntil = null; }
+  render();
+}
+function deqExpiry(field,val){
+  if(!state.draft.equipment[field] || typeof state.draft.equipment[field] !== 'object'){ state.draft.equipment[field] = {status:'maintenance', validUntil:null}; }
+  state.draft.equipment[field].validUntil = val ? new Date(val).toISOString() : null;
+}
+
+/* signature pad */
+let sigState = {};
+function initSignaturePads(){
+  ['sigOut','sigIn'].forEach(id=>{
+    const canvas = document.getElementById(id);
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#2BD9A8'; ctx.lineWidth = 2; ctx.lineCap='round';
+    let drawing=false, last=null;
+    function pos(e){
+      const r = canvas.getBoundingClientRect();
+      const p = e.touches? e.touches[0] : e;
+      return [(p.clientX-r.left)*(canvas.width/r.width), (p.clientY-r.top)*(canvas.height/r.height)];
+    }
+    function start(e){ drawing=true; last=pos(e); e.preventDefault(); }
+    function move(e){
+      if(!drawing) return;
+      const p = pos(e);
+      ctx.beginPath(); ctx.moveTo(last[0],last[1]); ctx.lineTo(p[0],p[1]); ctx.stroke();
+      last=p;
+      state.draft[id]=canvas.toDataURL();
+      e.preventDefault();
+    }
+    function end(){ drawing=false; }
+    canvas.onmousedown=start; canvas.onmousemove=move; canvas.onmouseup=end; canvas.onmouseleave=end;
+    canvas.ontouchstart=start; canvas.ontouchmove=move; canvas.ontouchend=end;
+  });
+}
+function clearSig(id){
+  const canvas = document.getElementById(id);
+  if(canvas){ canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height); }
+  state.draft[id]=null;
+}
+
+async function submitHandover(){
+  const dr = state.draft;
+  if(!dr.incoming.trim()){ toast('Please enter the incoming controller name.'); return; }
+  dr.id = Date.now();
+  dr.createdAt = new Date().toISOString();
+  const list = await getShared('handovers', []);
+  list.unshift(dr);
+  await setShared('handovers', list);
+  await pushNotification('New Handover Received', `${dr.outgoing} → ${dr.incoming} · ${dr.position} · ${dr.date}`, 'handover', normalizePosition(dr.position));
+  toast('Handover completed and archived ✓');
+  state.draft = blankDraft();
+  state.handoverTab='history';
+  await loadHistory();
+}
+
+let historyCache = null;
+let historyWorkLogCache = null;
+async function loadHistory(){
+  const [handovers, workLog] = await Promise.all([
+    getShared('handovers', []),
+    getShared('workLog', []),
+  ]);
+  historyCache = handovers;
+  historyWorkLogCache = workLog.filter(e=>e.done);
+  render();
+}
+function renderHistory(){
+  let list = historyCache || [];
+  if(state.histFilterDate) list = list.filter(h=>h.date===state.histFilterDate);
+  if(state.histFilterShift!=='all') list = list.filter(h=>h.shiftTime===state.histFilterShift);
+  const checked = historyWorkLogCache || [];
+  return `
+    <div class="card" style="margin-bottom:16px;">
+      <div class="grid2">
+        <div class="field" style="margin-bottom:0;"><label>Filter Date</label><input type="date" value="${state.histFilterDate}" oninput="state.histFilterDate=this.value;render()"></div>
+        <div class="field" style="margin-bottom:0;"><label>Filter Shift</label>
+          <select onchange="state.histFilterShift=this.value;render()">
+            <option value="all">All Shifts</option>
+            <option ${state.histFilterShift==='06:00–14:00'?'selected':''}>06:00–14:00</option>
+            <option ${state.histFilterShift==='14:00–22:00'?'selected':''}>14:00–22:00</option>
+            <option ${state.histFilterShift==='22:00–06:00'?'selected':''}>22:00–06:00</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="section-label" style="margin-top:0;">Handover Records</div>
+    ${list.length===0? `<div class="empty-state">${icon('clipboard',34)}<div style="margin-top:10px;">No handover records yet.</div></div>` :
+      list.map((h,i)=>`
+      <div class="card" style="margin-bottom:10px;cursor:pointer;" onclick="openHandoverDetail(${i})">
+        <div class="between" style="margin-bottom:6px;">
+          <span style="font-weight:700;font-size:14.5px;">${h.date} · ${h.shiftTime}</span>
+          <span class="pill pill-blue">${h.position}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text-dim);">${h.outgoing} → ${h.incoming}</div>
+        ${h.safetyAlerts.length? `<div style="margin-top:8px;"><span class="pill pill-fault">${h.safetyAlerts.length} Safety Alert${h.safetyAlerts.length>1?'s':''}</span></div>`:''}
+      </div>`).join('')
+    }
+
+    <div class="section-label">Completed Work Log</div>
+    ${checked.length===0? `<div class="empty-state">${icon('check',30)}<div style="margin-top:10px;">No checked entries yet.</div></div>` :
+      checked.map(e=>`
+      <div class="card" style="margin-bottom:10px;">
+        <div class="between" style="margin-bottom:6px;">
+          <span class="pill pill-blue">${e.type}</span>
+          <span style="font-size:11px;color:var(--text-faint);">${timeAgo(e.createdAt)}</span>
+        </div>
+        ${e.type==='Billing' ? `
+          <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px;" class="mono">${e.callsign||'-'} · ${e.registration||'-'} · ${e.departure||'-'} → ${e.destination||'-'}</div>
+        ` : `
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;">${e.startAt? new Date(e.startAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'} → ${e.endAt? new Date(e.endAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</div>
+        `}
+        <div style="font-size:13.5px;">${e.description||'—'}</div>
+        <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Logged by ${e.addedBy} · ✓ Checked</div>
+      </div>`).join('')
+    }
+  `;
+}
+function openHandoverDetail(i){
+  let list = historyCache || [];
+  if(state.histFilterDate) list = list.filter(h=>h.date===state.histFilterDate);
+  if(state.histFilterShift!=='all') list = list.filter(h=>h.shiftTime===state.histFilterShift);
+  state.handoverDetail = list[i];
+  render();
+}
+function handoverDetailModal(){
+  const h = state.handoverDetail;
+  return `<div class="overlay" onclick="if(event.target===this){state.handoverDetail=null;render();}">
+    <div class="sheet" id="printable-report">
+      <div class="sheet-handle"></div>
+      <div class="disp" style="font-size:19px;margin-bottom:2px;">Handover Report</div>
+      <div style="font-size:12.5px;color:var(--text-faint);margin-bottom:16px;">${h.date} · ${h.shiftTime} · ${h.position}</div>
+
+      ${detailRow('Outgoing Controller', h.outgoing)}
+      ${detailRow('Incoming Controller', h.incoming)}
+      <div class="hr"></div>
+      <div class="section-label" style="margin-top:0;">Weather</div>
+      <div class="grid2">
+        ${detailRow('Wind', h.weather.wind)}${detailRow('Visibility', h.weather.visibility)}
+        ${detailRow('QNH', h.weather.qnh)}${detailRow('Temp', h.weather.temp)}
+        ${detailRow('Clouds', h.weather.clouds)}${detailRow('Rain/Fog', h.weather.rainFog)}
+      </div>
+      ${(h.position==='Tower'||h.position==='Ground') && h.runwayActive!==undefined ? `
+      <div class="section-label">Runway / Taxiway</div>
+      <div class="grid2">
+        ${detailRow('Active Runway', h.runwayActive)}${detailRow('Closed Runway', h.runwayClosed||'None')}
+      </div>` : ''}
+      ${(h.position==='Approach'||h.position==='Radar') && h.approachOps ? `
+      <div class="section-label">Approach Operations</div>
+      <div class="grid2">
+        ${detailRow('Sequence', h.approachOps.sequence||'—')}${detailRow('Holding Stack', h.approachOps.holdingStack||'—')}
+      </div>
+      ${h.approachOps.vectoringNotes?`<div style="font-size:13.5px;color:var(--text-dim);margin-top:-6px;margin-bottom:14px;">${h.approachOps.vectoringNotes}</div>`:''}` : ''}
+      ${h.position==='Area' && h.areaOps ? `
+      <div class="section-label">Area Control Operations</div>
+      <div class="grid2">
+        ${detailRow('Sector Traffic', h.areaOps.sectorTraffic||'—')}${detailRow('Handoffs', h.areaOps.handoffs||'—')}
+      </div>
+      ${h.areaOps.enrouteConflicts?`<div style="font-size:13.5px;color:var(--text-dim);margin-top:-6px;margin-bottom:14px;">${h.areaOps.enrouteConflicts}</div>`:''}` : ''}
+      <div class="section-label">Flight Ops</div>
+      <div class="grid2">
+        ${detailRow('Arrivals', h.flightOps.arrivals)}${detailRow('Departures', h.flightOps.departures)}
+        ${detailRow('Delayed', h.flightOps.delayed)}${detailRow('Holding', h.flightOps.holding)}
+      </div>
+      ${h.pendingTasks.length?`<div class="section-label">Pending Tasks</div><div class="chip-row">${h.pendingTasks.map(t=>`<span class="chip on">${t}</span>`).join('')}</div>`:''}
+      ${h.safetyAlerts.length?`<div class="section-label">Safety Alerts</div><div class="chip-row">${h.safetyAlerts.map(t=>`<span class="chip" style="border-color:var(--red);color:var(--red);">${t}</span>`).join('')}</div>`:''}
+      ${h.remarks?`<div class="section-label">Remarks</div><div style="font-size:13.5px;color:var(--text-dim);">${h.remarks}</div>`:''}
+
+      <div class="row" style="gap:10px;margin-top:22px;">
+        <button class="btn btn-secondary btn-block" onclick="state.handoverDetail=null;render()">Close</button>
+        <button class="btn btn-primary btn-block" onclick="exportReport()">${icon('download',16)} Export</button>
+      </div>
+    </div>
+  </div>`;
+}
+function exportReport(){
+  window.print();
+}
+
+/* ============================= ALERTS (emergency + safety) ============================= */
+/* ============================= NOTIFICATIONS ============================= */
+let notifCache = [];
+async function loadNotifications(){
+  const all = await getShared('notifications', []);
+  const myPosition = normalizePosition(state.profile?.position);
+  notifCache = all.filter(n => !n.targetPosition || n.targetPosition==='All' || n.targetPosition===myPosition);
+  const hadUnread = notifCache.some(n=>!n.read);
+  notifCache.forEach(n=>n.read=true);
+  if(hadUnread) await setShared('notifications', all.map(n=> notifCache.find(v=>v.id===n.id) ? {...n, read:true} : n));
+  render();
+}
+function renderNotifications(){
+  const iconFor = t=> t==='handover'?'clipboard': t==='emergency'?'alert': t==='equipment'?'tool':'bell';
+  return `
+  ${shellTop('Notifications')}
+  <div class="screen px">
+    <button class="link" style="margin-bottom:10px;" onclick="goBackFromNotif()">${icon('back',14)} Back</button>
+    ${notifCache.length===0? `<div class="empty-state">${icon('bell',34)}<div style="margin-top:10px;">You're all caught up.</div></div>` :
+      notifCache.map(n=>`
+      <div class="notif-item">
+        <div class="icon-btn" style="background:var(--panel-hi);">${icon(iconFor(n.type),16)}</div>
+        <div style="flex:1;">
+          <div class="between"><span style="font-weight:600;font-size:13.5px;">${n.title}</span><span style="font-size:11px;color:var(--text-faint);">${n.time}</span></div>
+          <div style="font-size:13px;color:var(--text-dim);margin-top:2px;">${n.message}</div>
+        </div>
+      </div>`).join('')
+    }
+  </div>
+  `;
+}
+function goBackFromNotif(){ goto('dashboard'); }
+
+/* ============================= PROFILE ============================= */
+function renderProfile(){
+  const p = state.profile || {};
+  return `
+  ${shellTop('Profile')}
+  <div class="screen px">
+    <div class="card" style="text-align:center;padding:26px 16px;">
+      <div class="avatar" style="width:64px;height:64px;font-size:22px;margin:0 auto 12px;">${initials(p.name)}</div>
+      <div class="disp" style="font-size:19px;">${p.name}</div>
+      <div style="font-size:13px;color:var(--text-dim);">${p.role} · ${p.employeeId}</div>
+    </div>
+
+    <div class="between" style="margin-top:26px;margin-bottom:10px;">
+      <div class="section-label" style="margin:0;flex:1;">Details</div>
+      <button class="link" onclick="state.editingProfile=!state.editingProfile;render()">${state.editingProfile?'Cancel':'Edit'}</button>
+    </div>
+    ${state.editingProfile? `
+    <div class="card">
+      <div class="field"><label>Name</label><input type="text" id="pf-name" value="${p.name||''}"></div>
+      <div class="field"><label>What should I call you?</label><input type="text" id="pf-nickname" value="${p.nickname||''}"></div>
+      <div class="field"><label>Controller ID</label><input type="text" id="pf-cid" value="${p.controllerId||''}"></div>
+      <div class="field"><label>Employee ID</label><input type="text" id="pf-emp" value="${p.employeeId||''}"></div>
+      <div class="field"><label>Role</label><input type="text" id="pf-role" value="${p.role||''}"></div>
+      <div class="field" style="margin-bottom:0;"><label>Shift Schedule</label><input type="text" id="pf-shift" value="${p.shift||''}"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="saveProfileEdits()">${icon('check',15)} Save Changes</button>
+    </div>
+    ` : `
+    <div class="card">
+      ${detailRow('Preferred Name', p.nickname||firstName(p.name))}
+      ${detailRow('Controller ID', p.controllerId)}
+      ${detailRow('Employee ID', p.employeeId)}
+      ${detailRow('Airport', AIRPORT_NAME+' ('+AIRPORT_CODE+')')}
+      ${detailRow('Role', p.role)}
+      ${detailRow('Control Position', p.position||'ATC Tower')}
+      <div style="margin-bottom:0;">${detailRow('Shift Schedule', p.shift)}</div>
+    </div>
+    `}
+
+    ${p.isAdmin ? `
+    <div class="section-label">Manage Access <span class="pill pill-blue" style="margin-left:6px;">Admin</span></div>
+    <div class="card">
+      <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px;">Only Gmail addresses on this list can sign in. Add your team's emails here.</div>
+      <div id="allowlist-slot">${allowlistCache===null? '<div style="color:var(--text-faint);font-size:13px;">Loading…</div>' : allowlistCache.map(a=>`
+        <div class="between" style="padding:9px 0;border-bottom:1px solid var(--line-soft);">
+          <span class="mono" style="font-size:13px;">${a.email}</span>
+          <span class="x" onclick="removeAllowedEmail('${a.email}')">${icon('back',13)}</span>
+        </div>`).join('')}</div>
+      <div class="add-row">
+        <input type="email" placeholder="teammate@gmail.com" id="al-email">
+        <button class="btn btn-secondary btn-sm" onclick="addAllowedEmail()">Add</button>
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="section-label">Account</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-secondary btn-block" onclick="state.showChangePass=true;render()">${icon('lock',16)} Change Password</button>
+      <button class="btn btn-danger btn-block" onclick="doLogout()">${icon('logout',16)} Logout</button>
+    </div>
+  </div>
+  ${bottomNav()}
+  ${state.showChangePass? changePassModal() : ''}
+  `;
+}
+let allowlistCache = null;
+async function loadAllowlist(){
+  const { data } = await sb.from('allowed_emails').select('*').order('added_at', {ascending:false});
+  allowlistCache = data || [];
+  render();
+}
+async function addAllowedEmail(){
+  const email = document.getElementById('al-email').value.trim().toLowerCase();
+  if(!email){ return; }
+  const { error } = await sb.from('allowed_emails').insert({ email, added_by: state.profile?.name || 'Admin' });
+  if(error){ toast('Could not add — '+error.message); return; }
+  toast('Access granted for '+email);
+  document.getElementById('al-email').value = '';
+  await loadAllowlist();
+}
+async function removeAllowedEmail(email){
+  await sb.from('allowed_emails').delete().eq('email', email);
+  toast('Access removed for '+email);
+  await loadAllowlist();
+}
+async function saveProfileEdits(){
+  const fields = {
+    name: document.getElementById('pf-name').value.trim(),
+    nickname: document.getElementById('pf-nickname').value.trim(),
+    controllerId: document.getElementById('pf-cid').value.trim(),
+    employeeId: document.getElementById('pf-emp').value.trim(),
+    role: document.getElementById('pf-role').value.trim(),
+    shift: document.getElementById('pf-shift').value.trim(),
+  };
+  await updateProfile(fields);
+  state.profile = {...state.profile, ...fields};
+  state.editingProfile = false;
+  toast('Profile updated ✓');
+  render();
+}
+function changePassModal(){
+  return `<div class="overlay" onclick="if(event.target===this){state.showChangePass=false;render();}">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="disp" style="font-size:19px;margin-bottom:14px;">Change Password</div>
+      <div class="field"><label>New Password</label><input type="password" id="cp-new" placeholder="At least 6 characters"></div>
+      <div class="field" style="margin-bottom:0;"><label>Confirm New Password</label><input type="password" id="cp-conf"></div>
+      <div id="cp-msg" style="font-size:12.5px;color:var(--red);margin-top:10px;display:none;"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:18px;" onclick="changePassword()">Update Password</button>
+    </div>
+  </div>`;
+}
+async function changePassword(){
+  const nw = document.getElementById('cp-new').value;
+  const conf = document.getElementById('cp-conf').value;
+  const msg = document.getElementById('cp-msg');
+  if(!nw || nw.length<6){ msg.style.display='block'; msg.textContent='Password must be at least 6 characters.'; return; }
+  if(nw!==conf){ msg.style.display='block'; msg.textContent='Passwords do not match.'; return; }
+  const { error } = await sb.auth.updateUser({ password: nw });
+  if(error){ msg.style.display='block'; msg.textContent='Could not update password: '+error.message; return; }
+  state.showChangePass=false;
+  toast('Password updated ✓');
+  render();
+}
+
+/* ============================= ICONS (inline SVG, minimal line set) ============================= */
+function icon(name,size=18,color='currentColor'){
+  const s=size;
+  const paths = {
+    tower:`<rect x="2.3" y="8.4" width="4.6" height="2.3" rx="0.6" fill="none" stroke="${color}" stroke-width="1.3"/><path d="M2.9 10.7l0.7 5.4h2.4l0.7-5.4" fill="none" stroke="${color}" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.6 16.1h4.6" stroke="${color}" stroke-width="1.4" stroke-linecap="round"/><rect x="17.1" y="8.4" width="4.6" height="2.3" rx="0.6" fill="none" stroke="${color}" stroke-width="1.3"/><path d="M17.7 10.7l0.7 5.4h2.4l0.7-5.4" fill="none" stroke="${color}" stroke-width="1.3" stroke-linejoin="round"/><path d="M17.4 16.1h4.6" stroke="${color}" stroke-width="1.4" stroke-linecap="round"/><path d="M6.9 9.3l4.6 2 1-2.6.9 0 1 2.6 4.6-2-1.2 2.4-4 1.2-.3 2.4-.9 0-.3-2.4-4-1.2z" fill="${color}"/>`,
+    google:`<path fill="#4285F4" d="M21.6 12.23c0-.75-.07-1.47-.19-2.16H12v4.08h5.38a4.6 4.6 0 01-2 3.02v2.5h3.23c1.9-1.75 2.99-4.33 2.99-7.44z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.43l-3.23-2.5c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.75-5.59-4.11H3.07v2.58A9.99 9.99 0 0012 22z"/><path fill="#FBBC05" d="M6.41 13.92A5.99 5.99 0 016.09 12c0-.67.12-1.32.32-1.92V7.5H3.07A9.99 9.99 0 002 12c0 1.61.39 3.14 1.07 4.5l3.34-2.58z"/><path fill="#EA4335" d="M12 6.58c1.47 0 2.79.5 3.82 1.5l2.87-2.87C16.95 3.47 14.7 2.5 12 2.5A9.99 9.99 0 003.07 7.5l3.34 2.58C7.2 8.32 9.4 6.58 12 6.58z"/>`,
+    home:`<path d="M3 11l9-8 9 8" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/>`,
+    plane:`<path d="M2 16l20-7-8 12-2-6-6-2 20-7" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/>`,
+    clipboard:`<rect x="5" y="4" width="14" height="17" rx="2" fill="none" stroke="${color}" stroke-width="1.7"/><rect x="9" y="2" width="6" height="4" rx="1" fill="none" stroke="${color}" stroke-width="1.7"/><path d="M8 11h8M8 15h5" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>`,
+    alert:`<path d="M12 3l10 18H2L12 3z" fill="none" stroke="${color}" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 10v5" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="18" r="0.9" fill="${color}"/>`,
+    user:`<circle cx="12" cy="8" r="4" fill="none" stroke="${color}" stroke-width="1.7"/><path d="M4 21c1.5-4.5 5-6.5 8-6.5s6.5 2 8 6.5" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round"/>`,
+    bell:`<path d="M6 10a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6z" fill="none" stroke="${color}" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 20a2 2 0 004 0" fill="none" stroke="${color}" stroke-width="1.7"/>`,
+    clock:`<circle cx="12" cy="12" r="9" fill="none" stroke="${color}" stroke-width="1.6"/><path d="M12 7v5l4 2" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>`,
+    flag:`<path d="M5 3v18" stroke="${color}" stroke-width="1.7" stroke-linecap="round"/><path d="M5 4h13l-3 4 3 4H5" fill="none" stroke="${color}" stroke-width="1.7" stroke-linejoin="round"/>`,
+    gate:`<path d="M4 21V7l8-4 8 4v14" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 21v-8h6v8" fill="none" stroke="${color}" stroke-width="1.6"/>`,
+    check:`<path d="M4 12l6 6L20 6" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    plus:`<path d="M12 4v16M4 12h16" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`,
+    download:`<path d="M12 3v13" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/><path d="M6 11l6 6 6-6" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 20h16" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/>`,
+    lock:`<rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="${color}" stroke-width="1.7"/><path d="M8 11V7a4 4 0 018 0v4" fill="none" stroke="${color}" stroke-width="1.7"/>`,
+    logout:`<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round"/><path d="M16 17l5-5-5-5" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12H9" stroke="${color}" stroke-width="1.7" stroke-linecap="round"/>`,
+    unlock:`<rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="${color}" stroke-width="1.7"/><path d="M8 11V7a4 4 0 017.8-1.3" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round"/>`,
+    fingerprint:`<path d="M12 2a8 8 0 00-8 8c0 4 1 6 1 6" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><path d="M12 2a8 8 0 018 8c0 5-2 8-2 8" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><path d="M12 6a6 6 0 00-6 6c0 3 1 5 1 5" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><path d="M12 6a6 6 0 016 6c0 4-1.5 7-1.5 7" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/><path d="M12 10a2 2 0 00-2 2c0 4 2 7 2 7" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>`,
+    phone:`<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2C10 21 3 14 3 6a2 2 0 012-2z" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/>`,
+    list:`<circle cx="5" cy="7" r="1.3" fill="${color}"/><circle cx="5" cy="12" r="1.3" fill="${color}"/><circle cx="5" cy="17" r="1.3" fill="${color}"/><path d="M9 7h11M9 12h11M9 17h11" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>`,
+    map:`<path d="M9 4l-5 2v14l5-2 6 2 5-2V4l-5 2-6-2z" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="${color}" stroke-width="1.5"/>`,
+    bird:`<path d="M4 14c3-6 9-9 16-8-1 2-2 3-4 3 1 2 1 4-1 6-3 3-8 3-11-1z" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/><circle cx="16" cy="8" r="0.8" fill="${color}"/>`,
+    runway:`<rect x="10" y="2" width="4" height="20" fill="none" stroke="${color}" stroke-width="1.5"/><path d="M10 6h4M10 11h4M10 16h4" stroke="${color}" stroke-width="1.5"/>`,
+    'radio-off':`<path d="M9 9a5 5 0 017 7" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="${color}"/><path d="M3 3l18 18" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>`,
+    fire:`<path d="M12 2c1 4-3 5-3 9a3 3 0 006 0c1-2-1-3-1-5 2 1 4 4 4 7a6 6 0 01-12 0c0-5 3-7 6-11z" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>`,
+    cross:`<path d="M12 4v16M4 12h16" stroke="${color}" stroke-width="2.2" stroke-linecap="round"/>`,
+    cloud:`<path d="M7 18a4 4 0 01-1-7.9 5 5 0 019.6-1.7A4.5 4.5 0 0117.5 18H7z" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>`,
+    tool:`<path d="M14 6a4 4 0 00-5 5L4 16l3 3 5-5a4 4 0 005-5l-3 3-2-2 3-3z" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>`,
+    back:`<path d="M15 5l-7 7 7 7" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`,
+    dot:`<circle cx="12" cy="12" r="5" fill="${color}"/>`,
+  };
+  return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none">${paths[name]||paths.dot}</svg>`;
+}
+function firstName(name){
+  if(!name) return 'Controller';
+  return name.split(' ')[0];
+}
+function initials(name){
+  if(!name) return 'AC';
+  return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+
+/* ============================= MASTER RENDER ============================= */
+function render(){
+  let html = '';
+  if(!state.loggedIn){
+    html = renderLogin();
+  } else {
+    switch(state.screen){
+      case 'dashboard': html = renderDashboard(); break;
+      case 'notams': html = renderNotams(); break;
+      case 'handover': html = renderHandover(); break;
+      case 'profile': html = renderProfile(); break;
+      case 'notifications': html = renderNotifications(); break;
+      default: html = renderDashboard();
+    }
+  }
+  if(state.showLogoutConfirm) html += logoutModal();
+  if(state.toastMsg) html += `<div class="toast">${state.toastMsg}</div>`;
+  document.body.classList.toggle('app-shell', state.loggedIn);
+  document.getElementById('app').innerHTML = html;
+
+  // post-render side effects (NOT data fetching — that happens only on navigation, see goto())
+  if(state.loggedIn && state.screen==='handover' && state.handoverTab==='create'){ requestAnimationFrame(initSignaturePads); }
+  updateBellIndicator();
+}
+async function updateBellIndicator(){
+  const el = document.getElementById('bell-indicator');
+  if(!el || !state.profile) return;
+  const list = await getShared('notifications', []);
+  const myPosition = normalizePosition(state.profile.position);
+  const unread = list.filter(n=>!n.read && (!n.targetPosition || n.targetPosition==='All' || n.targetPosition===myPosition)).length;
+  if(unread>0){ el.outerHTML = '<span class="bell-dot" id="bell-indicator-mark"></span>'; }
+}
+
+init();
+
+/* ============================= PWA: SERVICE WORKER REGISTRATION ============================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('SW registration failed', e));
+  });
+}
+</script>
+</body>
+</html>
